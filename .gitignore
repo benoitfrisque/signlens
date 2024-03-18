@@ -2,10 +2,13 @@ raw_data/
 
 .env
 
+
 # OS generated files #
 ######################
 .DS_Store
 __MACOSX
+Zone.Identifier
+
 # Jupiter Notebook #
 .pytest_cache
 __pycache__
