@@ -8,8 +8,8 @@ pandas
 matplotlib
 seaborn
 scikit-learn
-tflite-runtime
-opencv-python
+tensorflow
+# opencv-python
 mediapipe
 pyarrow
 fastparquet
