@@ -19,6 +19,7 @@ __pycache__
 *.egg-info
 *.csv
 *.zip
+*.parquet
 mlruns
 *.sqlite
 # IDE #
