@@ -1,7 +1,7 @@
 install_requirements:
 	@pip install --upgrade pip
 	@pip install -r requirements.txt
-	@apt-get install ffmpeg
+	@sudo apt-get install ffmpeg
 
 create_virtual_env:
 	@pip install --upgrade pip

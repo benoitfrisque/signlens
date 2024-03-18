@@ -8,7 +8,8 @@ pandas
 matplotlib
 seaborn
 scikit-learn
-tflite_runtime
+tflite-runtime
 opencv-python
 mediapipe
-ffmpeg
+pyarrow
+fastparquet
