@@ -113,9 +113,19 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
 
     return train
 
-def filter_out_parquet_frame(df,frame=100.0):
+def filter_out_parquet_frame(df,n_frame=100):
     """
-    This function filter out the parquet according to their number of frame
-    Please make sur to input the data frame after using load_frame_number_parquet
+    Filters the DataFrame by the 'frame_parquet' column to include only rows where the number of frames is less than or equal to the specified threshold.
+    This function is intended to be used on DataFrames that have already been processed by the 'load_frame_number_parquet'
+    function, which adds the 'frame_parquet' column indicating the number of frames for each parquet file.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame to filter. It must include a 'frame_parquet' column.
+    - n_frame (int): The maximum number of frames allowed for a row to be included in the filtered DataFrame.
+
+    Returns:
+    - pd.DataFrame: A new DataFrame consisting of rows from the original DataFrame where the 'frame_parquet' value is less than or equal to 'frame_threshold'.
+    The index of the DataFrame will be reset.
+
     """
-    return df[df["frame_parquet"]<=frame].reset_index(drop=True)
+    return df[df["frame_parquet"]<=n_frame].reset_index(drop=True)
