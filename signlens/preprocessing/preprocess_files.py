@@ -75,7 +75,7 @@ def load_relevant_data_subset(pq_path,noface=True):
     data = data.values.reshape(n_frames, frame_rows, n_dim)
     return data.astype(np.float32)
 
-def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR,frac=1.0):
+def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
     """
     Enhances the input 'train' DataFrame by adding a 'frame_parquet' column which calculates the number of frames
     for each parquet file referenced in the DataFrame. If a CSV file at the specified path ('csv_path') named 'train_frame.csv'
@@ -85,7 +85,6 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR,frac=1.0):
     - train (pd.DataFrame): The input DataFrame containing a column 'file_path' with paths to the parquet files.
     - csv_path (str, optional): The directory path where 'train_frame.csv' will be saved or loaded from.
       Defaults to 'TRAIN_DATA_DIR'.
-    - frac factor to split the data 1 = 100% data / 0.1 = 10% data ...
 
     Returns:
     - pd.DataFrame: The enhanced DataFrame with a 'frame_parquet' column indicating the number of frames
@@ -109,10 +108,9 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR,frac=1.0):
         train.to_csv(csv_filename, index=False)
         print(f" ✅ File has been saved at : {csv_filename}")
     else:
-        train = pd.read_csv(csv_filename)
-        print("File already exist")
-        if frac < 1:
-            train = train.sample(frac=frac)
+        full_df = pd.read_csv(csv_filename)
+        train = full_df[full_df['sequence_id'].isin(train['sequence_id'])]
+        print("File already exists, loaded matching 'sequence_id' rows.")
 
     return train
 
