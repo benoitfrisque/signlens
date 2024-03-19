@@ -108,7 +108,66 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
         train.to_csv(csv_filename, index=False)
         print(f" ✅ File has been saved at : {csv_filename}")
     else:
-        train = pd.read_csv(csv_filename)
-        print("File already exist")
+        full_df = pd.read_csv(csv_filename)
+        train = full_df[full_df['sequence_id'].isin(train['sequence_id'])]
+        print("File already exists, loaded matching 'sequence_id' rows.")
 
     return train
+
+def filter_out_parquet_frame(df,n_frame=100):
+    """
+    Filters the DataFrame by the 'frame_parquet' column to include only rows where the number of frames is less than or equal to the specified threshold.
+    This function is intended to be used on DataFrames that have already been processed by the 'load_frame_number_parquet'
+    function, which adds the 'frame_parquet' column indicating the number of frames for each parquet file.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame to filter. It must include a 'frame_parquet' column.
+    - n_frame (int): The maximum number of frames allowed for a row to be included in the filtered DataFrame.
+
+    Returns:
+    - pd.DataFrame: A new DataFrame consisting of rows from the original DataFrame where the 'frame_parquet' value is less than or equal to 'n_frame'.
+    The index of the DataFrame will be reset.
+
+    """
+    return df[df["frame_parquet"]<=n_frame].reset_index(drop=True)
+
+def pad_sequences(sequence,n_frames=100):
+    '''
+    Args:
+        - NumPy Array: Sequence of landmarks
+        - int: number of frames
+    Returns:
+        - Numpy Array: Padded or cut off sequence of landmarks
+    '''
+    if len(sequence) < n_frames:
+        pad_width = int(n_frames - len(sequence))
+        sequence = np.pad(sequence, ((0, pad_width), (0, 0),(0, 0)), mode='constant')
+    else:
+        # TO DO: check if sign is at beginning, middle or end
+        sequence = sequence[:n_frames]
+    return sequence
+
+
+
+def load_relevant_data_subset_per_landmark_type(pq_path):
+    """
+    Loads relevant data subset per landmark type from a Parquet file.
+    Args:
+    pq_path (str): Path to the Parquet file containing the data.
+    Returns:
+    dict: A dictionary containing data subsets for each landmark type.
+          Keys are landmark types ('pose', 'left_hand', 'right_hand') and
+          values are numpy arrays containing data subsets for each type.
+    """
+    data_columns = ['frame','type','x', 'y', 'z']
+    data = pd.read_parquet(pq_path, columns=data_columns)
+    n_frames = data.frame.nunique()
+    data_left_hand = data[data.type == 'left_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_right_hand = data[data.type == 'right_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_pose = data[data.type == 'pose'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMAKRS_POSE, 3)
+    data_dict = {
+        'pose': data_pose,
+        'left_hand': data_left_hand,
+        'right_hand': data_right_hand
+    }
+    return data_dict
