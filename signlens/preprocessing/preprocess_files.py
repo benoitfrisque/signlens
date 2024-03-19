@@ -112,3 +112,10 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
         print("File already exist")
 
     return train
+
+def filter_out_parquet_frame(df,frame=100.0):
+    """
+    This function filter out the parquet according to their number of frame
+    Please make sur to input the data frame after using load_frame_number_parquet
+    """
+    return df[df["frame_parquet"]<=frame].reset_index(drop=True)
