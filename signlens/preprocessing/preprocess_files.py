@@ -75,7 +75,7 @@ def load_relevant_data_subset(pq_path,noface=True):
     data = data.values.reshape(n_frames, frame_rows, n_dim)
     return data.astype(np.float32)
 
-def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
+def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR,frac=1.0):
     """
     Enhances the input 'train' DataFrame by adding a 'frame_parquet' column which calculates the number of frames
     for each parquet file referenced in the DataFrame. If a CSV file at the specified path ('csv_path') named 'train_frame.csv'
@@ -85,6 +85,7 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
     - train (pd.DataFrame): The input DataFrame containing a column 'file_path' with paths to the parquet files.
     - csv_path (str, optional): The directory path where 'train_frame.csv' will be saved or loaded from.
       Defaults to 'TRAIN_DATA_DIR'.
+    - frac factor to split the data 1 = 100% data / 0.1 = 10% data ...
 
     Returns:
     - pd.DataFrame: The enhanced DataFrame with a 'frame_parquet' column indicating the number of frames
@@ -110,6 +111,8 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
     else:
         train = pd.read_csv(csv_filename)
         print("File already exist")
+        if frac < 1:
+            train = train.sample(frac=frac)
 
     return train
 
@@ -145,3 +148,28 @@ def pad_sequences(sequence,n_frames=100):
         # TO DO: check if sign is at beginning, middle or end
         sequence = sequence[:n_frames]
     return sequence
+
+
+
+def load_relevant_data_subset_per_landmark_type(pq_path):
+    """
+    Loads relevant data subset per landmark type from a Parquet file.
+    Args:
+    pq_path (str): Path to the Parquet file containing the data.
+    Returns:
+    dict: A dictionary containing data subsets for each landmark type.
+          Keys are landmark types ('pose', 'left_hand', 'right_hand') and
+          values are numpy arrays containing data subsets for each type.
+    """
+    data_columns = ['frame','type','x', 'y', 'z']
+    data = pd.read_parquet(pq_path, columns=data_columns)
+    n_frames = data.frame.nunique()
+    data_left_hand = data[data.type == 'left_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_right_hand = data[data.type == 'right_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_pose = data[data.type == 'pose'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMAKRS_POSE, 3)
+    data_dict = {
+        'pose': data_pose,
+        'left_hand': data_left_hand,
+        'right_hand': data_right_hand
+    }
+    return data_dict
