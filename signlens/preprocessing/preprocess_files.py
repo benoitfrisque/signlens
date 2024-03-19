@@ -124,7 +124,7 @@ def filter_out_parquet_frame(df,n_frame=100):
     - n_frame (int): The maximum number of frames allowed for a row to be included in the filtered DataFrame.
 
     Returns:
-    - pd.DataFrame: A new DataFrame consisting of rows from the original DataFrame where the 'frame_parquet' value is less than or equal to 'frame_threshold'.
+    - pd.DataFrame: A new DataFrame consisting of rows from the original DataFrame where the 'frame_parquet' value is less than or equal to 'n_frame'.
     The index of the DataFrame will be reset.
 
     """
