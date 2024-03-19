@@ -77,7 +77,25 @@ def load_relevant_data_subset(pq_path,noface=True):
 
 def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
     """
-    Take the train DataFrame and add a column which represent the number of frame for each parquet
+    Enhances the input 'train' DataFrame by adding a 'frame_parquet' column which calculates the number of frames
+    for each parquet file referenced in the DataFrame. If a CSV file at the specified path ('csv_path') named 'train_frame.csv'
+    already exists, this function loads the DataFrame from that CSV instead of re-processing the parquet files.
+
+    Parameters:
+    - train (pd.DataFrame): The input DataFrame containing a column 'file_path' with paths to the parquet files.
+    - csv_path (str, optional): The directory path where 'train_frame.csv' will be saved or loaded from.
+      Defaults to 'TRAIN_DATA_DIR'.
+
+    Returns:
+    - pd.DataFrame: The enhanced DataFrame with a 'frame_parquet' column indicating the number of frames
+      for each file. If 'train_frame.csv' exists, returns the DataFrame loaded from this CSV.
+
+    Note:
+    - This function checks for the existence of 'train_frame.csv' in the specified 'csv_path'.
+      If the file does not exist, it calculates the frame difference for each parquet file and saves the result as a CSV.
+      If the file exists, it loads and returns the DataFrame from the CSV, bypassing the calculation.
+    - Make sure 'TRAIN_DATA_DIR' is defined and accessible in your environment before using this function.
+
     """
 
     csv_filename=csv_path+"/train_frame.csv"
