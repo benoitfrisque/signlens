@@ -108,8 +108,9 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
         train.to_csv(csv_filename, index=False)
         print(f" ✅ File has been saved at : {csv_filename}")
     else:
-        train = pd.read_csv(csv_filename)
-        print("File already exist")
+        full_df = pd.read_csv(csv_filename)
+        train = full_df[full_df['sequence_id'].isin(train['sequence_id'])]
+        print("File already exists, loaded matching 'sequence_id' rows.")
 
     return train
 
@@ -145,3 +146,28 @@ def pad_sequences(sequence,n_frames=100):
         # TO DO: check if sign is at beginning, middle or end
         sequence = sequence[:n_frames]
     return sequence
+
+
+
+def load_relevant_data_subset_per_landmark_type(pq_path):
+    """
+    Loads relevant data subset per landmark type from a Parquet file.
+    Args:
+    pq_path (str): Path to the Parquet file containing the data.
+    Returns:
+    dict: A dictionary containing data subsets for each landmark type.
+          Keys are landmark types ('pose', 'left_hand', 'right_hand') and
+          values are numpy arrays containing data subsets for each type.
+    """
+    data_columns = ['frame','type','x', 'y', 'z']
+    data = pd.read_parquet(pq_path, columns=data_columns)
+    n_frames = data.frame.nunique()
+    data_left_hand = data[data.type == 'left_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_right_hand = data[data.type == 'right_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_pose = data[data.type == 'pose'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMAKRS_POSE, 3)
+    data_dict = {
+        'pose': data_pose,
+        'left_hand': data_left_hand,
+        'right_hand': data_right_hand
+    }
+    return data_dict
