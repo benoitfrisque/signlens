@@ -11,5 +11,5 @@ opencv-python
 mediapipe
 pyarrow
 fastparquet
-coloroma
+colorama
 typing
