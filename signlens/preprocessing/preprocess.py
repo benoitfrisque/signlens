@@ -4,7 +4,7 @@ from colorama import Fore, Style
 from signlens.params import *
 from signlens.preprocessing.data import *
 from tensorflow.keras.utils import to_categorical
-
+from sklearn.preprocessing import OneHotEncoder
 
 
 def pad_sequences(sequence,n_frames=100):
@@ -65,11 +65,9 @@ def label_dictionnary(df):
     Finally, it converts the encoded values to one-hot encoded vectors using TensorFlow's
     to_categorical function.
     """
-
-    label_map_dict=pd.read_json(LABEL_MAP_PATH, orient='index').to_dict()[0]
-    df['sign_encoded'] = df['sign'].map(label_map_dict)
-    y_encoded = to_categorical(df['sign_encoded'])
-    df=df.drop(columns="sign_encoded")
+    encoder = OneHotEncoder()
+    encoded_data = encoder.fit_transform(df[['sign']])
+    y_encoded = encoded_data.toarray()
     return y_encoded
 
 def xy_generator(train_frame,n_frames=100):
