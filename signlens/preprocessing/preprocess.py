@@ -3,11 +3,11 @@ import numpy as np
 from colorama import Fore, Style
 from signlens.params import *
 from signlens.preprocessing.data import *
-from tensorflow.keras.utils import to_categorical
+# from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import OneHotEncoder
 
 
-def pad_sequences(sequence,n_frames=100):
+def pad_sequences(sequence, n_frames=MAX_SEQ_LEN):
     '''
     Args:
         - NumPy Array: Sequence of landmarks
@@ -23,7 +23,7 @@ def pad_sequences(sequence,n_frames=100):
         sequence = sequence[:n_frames]
     return sequence
 
-def group_pad_sequences(df,frame=100):
+def group_pad_sequences(df, n_frames=MAX_SEQ_LEN):
     """
     Group and pad sequences from DataFrame file paths.
 
@@ -35,15 +35,15 @@ def group_pad_sequences(df,frame=100):
 
     This function takes a DataFrame `df` containing file paths and loads relevant data subsets
     using `load_relevant_data_subset` function for each file path. It then pads the sequences to
-    ensure uniform length and shapes them into a 4D numpy array of shape (n, 100, 75, 3), where:
+    ensure uniform length and shapes them into a 4D numpy array of shape (n, n_frames, N_LANDMARKS_NO_FACE, 3), where:
     - n is the number of file paths in the DataFrame.
-    - 100 is the number of frame.
-    - 75 is the number of landmarks.
+    - n_frames is the number of frames.
+    - N_LANDMARKS_NO_FACE is the number of landmarks.
     - 3 represents the number of positions(x,y and z)).
 
     """
     n=len(df.file_path)
-    data = np.empty((n, frame, N_LANDMARKS_NO_FACE, 3))
+    data = np.empty((n, n_frames, N_LANDMARKS_NO_FACE, 3))
     for i, file_path in enumerate(df.file_path):
         load_data=load_relevant_data_subset(file_path)
         data[i]=pad_sequences(load_data)
@@ -70,11 +70,11 @@ def label_dictionnary(df):
     y_encoded = encoded_data.toarray()
     return y_encoded
 
-def xy_generator(train_frame,n_frames=100):
+def xy_generator(train_frame, n_frames=MAX_SEQ_LEN):
     '''
     Yields X and y for input to model.fit
     Use example to iterate through all Xs and ys:
-        xy = xy_generator(train_frame,10)
+        xy = xy_generator(train_frame, 10)
         X,y = next(xy)
         print(X, y)
     Args:

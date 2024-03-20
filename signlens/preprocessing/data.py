@@ -17,7 +17,7 @@ import random
 # LOAD CSV
 ################################################################################
 
-def load_data_subset_csv(frac=1.0, noface=True, balanced=False, num_signs=None):
+def load_data_subset_csv(frac=1.0, noface=True, balanced=False, num_signs=NUM_CLASSES):
     '''
     Load a data subset, as a fraction of the original dataset. It can be balanced, and the number of signs can be limited.
 
@@ -25,7 +25,7 @@ def load_data_subset_csv(frac=1.0, noface=True, balanced=False, num_signs=None):
     - frac (float): Fraction of the original dataset to load. Defaults to 1.0, loading the entire dataset.
     - noface (bool): If True, use the noface dataset. Defaults to True.
     - balanced (bool): If True, balance the dataset based on the distribution of sign categories. Defaults to False.
-    - num_signs (int or None): Number of random sign categories to include. Defaults to None, including all sign categories.
+    - num_signs (int): Number of random sign categories to include. Defaults to NUM_CLASSES.
 
     Returns:
     - DataFrame: Subset of the training data according to the specified parameters.
@@ -121,7 +121,7 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
     - Make sure 'TRAIN_DATA_DIR' is defined and accessible in your environment before using this function.
 
     """
-    csv_path=TRAIN_DATA_DIR+"/train_frame.csv"
+    csv_path=TRAIN_DATA_DIR + "/train_frame.csv"
 
 
     # Check if csv file already exist
@@ -139,7 +139,7 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
 
     return train
 
-def filter_out_parquet_frame(df, n_frame=100):
+def filter_out_parquet_frame(df, n_frames=MAX_SEQ_LEN):
     """
     Filters the DataFrame by the 'frame_parquet' column to include only rows where the number of frames is less than or equal to the specified threshold.
     This function is intended to be used on DataFrames that have already been processed by the 'load_frame_number_parquet'
@@ -147,14 +147,14 @@ def filter_out_parquet_frame(df, n_frame=100):
 
     Parameters:
     - df (pd.DataFrame): The DataFrame to filter. It must include a 'frame_parquet' column.
-    - n_frame (int): The maximum number of frames allowed for a row to be included in the filtered DataFrame.
+    - n_frames (int): The maximum number of frames allowed for a row to be included in the filtered DataFrame.
 
     Returns:
     - pd.DataFrame: A new DataFrame consisting of rows from the original DataFrame where the 'frame_parquet' value is less than or equal to 'n_frame'.
     The index of the DataFrame will be reset.
 
     """
-    return df[df["frame_parquet"]<=n_frame].reset_index(drop=True)
+    return df[df["frame_parquet"] <= n_frames].reset_index(drop=True)
 
 
 ################################################################################

@@ -2,6 +2,14 @@ import os
 import numpy as np
 
 ##################  VARIABLES  ##################
+NUM_CLASSES = os.environ.get("NUM_CLASSES")   # Number of classes to analyze
+if NUM_CLASSES == 'all': NUM_CLASSES = 250
+
+# Max number of frames in a sequence, Used to pad sequences, and also filter out sequences
+MAX_SEQ_LEN = os.environ.get("MAX_SEQ_LEN")
+
+# Percentage of the data to load
+DATA_FRAC = os.environ.get("DATA_FRAC")
 
 ##################  CONSTANTS  #####################
 
