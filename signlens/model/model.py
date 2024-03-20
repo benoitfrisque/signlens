@@ -6,8 +6,9 @@ from typing import Tuple
 from colorama import Fore, Style
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 
-def Initialize_model(frame:int):
+def initialize_model(frame:int):
 
     num_classes=250
     model = Sequential()
@@ -16,7 +17,7 @@ def Initialize_model(frame:int):
     model.add(Dense(num_classes, activation='softmax'))
     return model
 
-def Compile_model(model: Model, learning_rate:float):
+def compile_model(model: Model, learning_rate:float):
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'],learning_rate=learning_rate)
     return model
 
@@ -87,3 +88,22 @@ def evaluate_model(
     print(f"✅ Model evaluated, MAE: {round(mae, 2)}")
 
     return metrics
+
+def plot_history(history):
+    # Accuracy values
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
+
+    # Loss values
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
