@@ -8,7 +8,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-def initialize_model(frame:int):
+def Initialize_model(frame:int):
 
     num_classes=250
     model = Sequential()
@@ -17,7 +17,7 @@ def initialize_model(frame:int):
     model.add(Dense(num_classes, activation='softmax'))
     return model
 
-def compile_model(model: Model, learning_rate:float):
+def Compile_model(model: Model, learning_rate:float):
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'],learning_rate=learning_rate)
     return model
 
