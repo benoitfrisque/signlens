@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 from colorama import Fore, Style
 from signlens.params import *
-from signlens.preprocessing.data import load_relevant_data_subset
 from tensorflow.keras.utils import to_categorical
+from signlens.preprocessing.data import *
+
 
 def pad_sequences(sequence,n_frames=100):
     '''
@@ -68,3 +69,19 @@ def label_dictionnary(df):
     df['sign_encoded'] = df['sign'].map(label_map_dict)
     y_encoded = to_categorical(df['sign_encoded'])
     return y_encoded
+def xy_generator(train_frame,n_frames=100):
+    '''
+    Yields X and y for input to model.fit
+    Use X, y = next(generator) to iterate through all Xs and ys
+
+    Args:
+        - DataFrame: train_frame
+        - int: number of frames
+    Returns:
+        - generator: X and y ()
+    '''
+    for i in train_frame.index:
+        X = load_relevant_data_subset(train_frame['file_path'][i])
+        X = pad_sequences(X, n_frames)
+        y = np.expand_dims(np.array(y),0)
+        yield X, y
