@@ -17,7 +17,7 @@ import random
 # LOAD CSV
 ################################################################################
 
-def load_data_subset_csv(frac=1.0, noface=True, balanced=False, num_signs=NUM_CLASSES):
+def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, num_signs=NUM_CLASSES):
     '''
     Load a data subset, as a fraction of the original dataset. It can be balanced, and the number of signs can be limited.
 
