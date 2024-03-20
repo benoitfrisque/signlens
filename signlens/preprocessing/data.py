@@ -13,8 +13,11 @@ from signlens.params import *
 import pandas as pd
 import random
 
+################################################################################
+# LOAD CSV
+################################################################################
 
-def load_subset_data(frac=1.0, noface=True, balanced=False, num_signs=None):
+def load_data_subset_csv(frac=1.0, noface=True, balanced=False, num_signs=None):
     '''
     Load a data subset, as a fraction of the original dataset. It can be balanced, and the number of signs can be limited.
 
@@ -96,6 +99,66 @@ def load_subset_data(frac=1.0, noface=True, balanced=False, num_signs=None):
         return train.reset_index(drop=True)
 
 
+def load_frame_number_parquet(train, csv_path=TRAIN_CSV_PATH):
+    """
+    Enhances the input 'train' DataFrame by adding a 'frame_parquet' column which calculates the number of frames
+    for each parquet file referenced in the DataFrame. If a CSV file at the specified path ('csv_path') named 'train_frame.csv'
+    already exists, this function loads the DataFrame from that CSV instead of re-processing the parquet files.
+
+    Parameters:
+    - train (pd.DataFrame): The input DataFrame containing a column 'file_path' with paths to the parquet files.
+    - csv_path (str, optional): The directory path where 'train_frame.csv' will be saved or loaded from.
+      Defaults to 'TRAIN_DATA_DIR'.
+
+    Returns:
+    - pd.DataFrame: The enhanced DataFrame with a 'frame_parquet' column indicating the number of frames
+      for each file. If 'train_frame.csv' exists, returns the DataFrame loaded from this CSV.
+
+    Note:
+    - This function checks for the existence of 'train_frame.csv' in the specified 'csv_path'.
+      If the file does not exist, it calculates the frame difference for each parquet file and saves the result as a CSV.
+      If the file exists, it loads and returns the DataFrame from the CSV, bypassing the calculation.
+    - Make sure 'TRAIN_DATA_DIR' is defined and accessible in your environment before using this function.
+
+    """
+
+    # Check if csv file already exist
+    if not os.path.exists(csv_path):
+        # If not existing create the column and save the data frame
+        for i in range(len(train)):
+            df = pd.read_parquet(train.loc[i, "file_path"]).copy()
+            train.at[i, "frame_parquet"] = df["frame"].iloc[-1] - df["frame"].iloc[0] + 1
+        train.to_csv(csv_path, index=False)
+        print(f" ✅ File has been saved at : {csv_path}")
+    else:
+        full_df = pd.read_csv(csv_path)
+        train = full_df[full_df['sequence_id'].isin(train['sequence_id'])]
+        print("File already exists, loaded matching 'sequence_id' rows.")
+
+    return train
+
+def filter_out_parquet_frame(df, n_frame=100):
+    """
+    Filters the DataFrame by the 'frame_parquet' column to include only rows where the number of frames is less than or equal to the specified threshold.
+    This function is intended to be used on DataFrames that have already been processed by the 'load_frame_number_parquet'
+    function, which adds the 'frame_parquet' column indicating the number of frames for each parquet file.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame to filter. It must include a 'frame_parquet' column.
+    - n_frame (int): The maximum number of frames allowed for a row to be included in the filtered DataFrame.
+
+    Returns:
+    - pd.DataFrame: A new DataFrame consisting of rows from the original DataFrame where the 'frame_parquet' value is less than or equal to 'n_frame'.
+    The index of the DataFrame will be reset.
+
+    """
+    return df[df["frame_parquet"]<=n_frame].reset_index(drop=True)
+
+
+################################################################################
+# LOAD PARQUET FILES
+################################################################################
+
 def load_relevant_data_subset(pq_path, noface=True):
     '''
     loads the relevant data from the parquet file.
@@ -134,61 +197,28 @@ def load_relevant_data_subset(pq_path, noface=True):
 
     return data.astype(np.float32)
 
-def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
+def load_relevant_data_subset_per_landmark_type(pq_path):
     """
-    Enhances the input 'train' DataFrame by adding a 'frame_parquet' column which calculates the number of frames
-    for each parquet file referenced in the DataFrame. If a CSV file at the specified path ('csv_path') named 'train_frame.csv'
-    already exists, this function loads the DataFrame from that CSV instead of re-processing the parquet files.
-
-    Parameters:
-    - train (pd.DataFrame): The input DataFrame containing a column 'file_path' with paths to the parquet files.
-    - csv_path (str, optional): The directory path where 'train_frame.csv' will be saved or loaded from.
-      Defaults to 'TRAIN_DATA_DIR'.
-
+    Loads relevant data subset per landmark type from a Parquet file.
+    Args:
+    pq_path (str): Path to the Parquet file containing the data.
     Returns:
-    - pd.DataFrame: The enhanced DataFrame with a 'frame_parquet' column indicating the number of frames
-      for each file. If 'train_frame.csv' exists, returns the DataFrame loaded from this CSV.
-
-    Note:
-    - This function checks for the existence of 'train_frame.csv' in the specified 'csv_path'.
-      If the file does not exist, it calculates the frame difference for each parquet file and saves the result as a CSV.
-      If the file exists, it loads and returns the DataFrame from the CSV, bypassing the calculation.
-    - Make sure 'TRAIN_DATA_DIR' is defined and accessible in your environment before using this function.
-
+    dict: A dictionary containing data subsets for each landmark type.
+          Keys are landmark types ('pose', 'left_hand', 'right_hand') and
+          values are numpy arrays containing data subsets for each type.
     """
-
-    csv_filename = csv_path + "/train_frame.csv"
-    # Check if csv file already exist
-    if not os.path.exists(csv_filename):
-        # If not existing create the column and save the data frame
-        for i in range(len(train)):
-            df = pd.read_parquet(train.loc[i, "file_path"]).copy()
-            train.at[i, "frame_parquet"] = df["frame"].iloc[-1] - df["frame"].iloc[0] + 1
-        train.to_csv(csv_filename, index=False)
-        print(f" ✅ File has been saved at : {csv_filename}")
-    else:
-        full_df = pd.read_csv(csv_filename)
-        train = full_df[full_df['sequence_id'].isin(train['sequence_id'])]
-        print("File already exists, loaded matching 'sequence_id' rows.")
-
-    return train
-
-def filter_out_parquet_frame(df, n_frame=100):
-    """
-    Filters the DataFrame by the 'frame_parquet' column to include only rows where the number of frames is less than or equal to the specified threshold.
-    This function is intended to be used on DataFrames that have already been processed by the 'load_frame_number_parquet'
-    function, which adds the 'frame_parquet' column indicating the number of frames for each parquet file.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame to filter. It must include a 'frame_parquet' column.
-    - n_frame (int): The maximum number of frames allowed for a row to be included in the filtered DataFrame.
-
-    Returns:
-    - pd.DataFrame: A new DataFrame consisting of rows from the original DataFrame where the 'frame_parquet' value is less than or equal to 'n_frame'.
-    The index of the DataFrame will be reset.
-
-    """
-    return df[df["frame_parquet"]<=n_frame].reset_index(drop=True)
+    data_columns = ['frame','type','x', 'y', 'z']
+    data = pd.read_parquet(pq_path, columns=data_columns)
+    n_frames = data.frame.nunique()
+    data_left_hand = data[data.type == 'left_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_right_hand = data[data.type == 'right_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_pose = data[data.type == 'pose'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMAKRS_POSE, 3)
+    data_dict = {
+        'pose': data_pose,
+        'left_hand': data_left_hand,
+        'right_hand': data_right_hand
+    }
+    return data_dict
 
 def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_columns=None):
     """
@@ -213,27 +243,3 @@ def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_colum
         filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
 
     return filtered_landmarks
-
-
-def load_relevant_data_subset_per_landmark_type(pq_path):
-    """
-    Loads relevant data subset per landmark type from a Parquet file.
-    Args:
-    pq_path (str): Path to the Parquet file containing the data.
-    Returns:
-    dict: A dictionary containing data subsets for each landmark type.
-          Keys are landmark types ('pose', 'left_hand', 'right_hand') and
-          values are numpy arrays containing data subsets for each type.
-    """
-    data_columns = ['frame','type','x', 'y', 'z']
-    data = pd.read_parquet(pq_path, columns=data_columns)
-    n_frames = data.frame.nunique()
-    data_left_hand = data[data.type == 'left_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
-    data_right_hand = data[data.type == 'right_hand'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
-    data_pose = data[data.type == 'pose'][['x', 'y', 'z']].values.reshape(n_frames, N_LANDMAKRS_POSE, 3)
-    data_dict = {
-        'pose': data_pose,
-        'left_hand': data_left_hand,
-        'right_hand': data_right_hand
-    }
-    return data_dict
