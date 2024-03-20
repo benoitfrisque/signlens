@@ -7,6 +7,8 @@ from colorama import Fore, Style
 import time
 import numpy as np
 from signlens.params import *
+import matplotlib.pyplot as plt
+
 
 def initialize_model(frame=100,num_classes=250):
 
@@ -96,3 +98,22 @@ def evaluate_model(
     print(f"✅ Model evaluated, loss: {round(loss, 2)}")
 
     return metrics
+
+def plot_history(history):
+    # Accuracy values
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
+
+    # Loss values
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
