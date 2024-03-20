@@ -70,19 +70,22 @@ def label_dictionnary(df):
     df['sign_encoded'] = df['sign'].map(label_map_dict)
     y_encoded = to_categorical(df['sign_encoded'])
     return y_encoded
+
 def xy_generator(train_frame,n_frames=100):
     '''
     Yields X and y for input to model.fit
-    Use X, y = next(generator) to iterate through all Xs and ys
-
+    Use example to iterate through all Xs and ys:
+        xy = xy_generator(train_frame,10)
+        X,y = next(xy)
+        print(X, y)
     Args:
         - DataFrame: train_frame
         - int: number of frames
     Returns:
-        - generator: X and y ()
+        - generator: X and y
     '''
     for i in train_frame.index:
         X = load_relevant_data_subset(train_frame['file_path'][i])
         X = pad_sequences(X, n_frames)
-        y = np.expand_dims(np.array(y),0)
+        y = np.expand_dims(np.array(train_frame['sign'][i]),0)
         yield X, y
