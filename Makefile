@@ -13,5 +13,9 @@ create_virtual_env:
 	@pyenv virtualenv 3.10.6 signlens
 	@pyenv local signlens
 
+install_requirements_dev:
+	@pip install --upgrade pip
+	@pip install -r requirements_dev.txt
+
 install_signlens_dev:
 	@pip install -e .
