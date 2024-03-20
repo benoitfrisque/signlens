@@ -2,8 +2,9 @@ import pandas as pd
 import numpy as np
 from colorama import Fore, Style
 from signlens.params import *
-from tensorflow.keras.utils import to_categorical
 from signlens.preprocessing.data import *
+from tensorflow.keras.utils import to_categorical
+
 
 
 def pad_sequences(sequence,n_frames=100):

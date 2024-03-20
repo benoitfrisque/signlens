@@ -7,7 +7,7 @@ from colorama import Fore, Style
 import time
 import numpy as np
 
-def Initialize_model(frame:int):
+def Initialize_model(frame=100):
 
     num_classes=250
     model = Sequential()
@@ -16,8 +16,8 @@ def Initialize_model(frame:int):
     model.add(Dense(num_classes, activation='softmax'))
     return model
 
-def Compile_model(model: Model, learning_rate:float):
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'],learning_rate=learning_rate)
+def Compile_model(model: Model):
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
 
 def train_model(
@@ -27,7 +27,8 @@ def train_model(
         batch_size=256,
         patience=2,
         validation_data=None,
-        validation_split=0.3
+        validation_split=0.3,
+        verbose=0
     ) -> Tuple[Model, dict]:
     """
     Fit the model and return a tuple (fitted_model, history)
@@ -49,10 +50,11 @@ def train_model(
         epochs=100,
         batch_size=batch_size,
         callbacks=[es],
-        verbose=0
+        verbose=verbose
     )
 
-    print(f"✅ Model trained on {len(X)} rows with min val MAE: {round(np.min(history.history['val_mae']), 2)}")
+    print(f"✅ Model trained on {len(X)} rows")
+    print(history)
 
     return model, history
 
