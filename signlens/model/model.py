@@ -6,6 +6,7 @@ from typing import Tuple
 from colorama import Fore, Style
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 
 def Initialize_model(frame=100):
 
@@ -89,3 +90,22 @@ def evaluate_model(
     print(f"✅ Model evaluated, MAE: {round(mae, 2)}")
 
     return metrics
+
+def plot_history(history):
+    # Accuracy values
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('Model accuracy')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
+
+    # Loss values
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.show()
