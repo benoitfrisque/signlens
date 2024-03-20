@@ -1,20 +1,35 @@
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import math
 from tqdm import tqdm  # Import tqdm for the progress bar
 import os
 from colorama import Fore, Style
 
 from signlens.params import *
 
-def load_subset_data(frac=1.0, noface=True, balanced=False):
+
+
+import pandas as pd
+import random
+
+
+def load_subset_data(frac=1.0, noface=True, balanced=False, num_signs=None):
     '''
-    Load subset of data based on the fraction of the original dataset.
-    Uses the noface dataset if noface is set to True.
-    Also balances the dataset if balanced is set to True.
+    Load a data subset, as a fraction of the original dataset. It can be balanced, and the number of signs can be limited.
+
+    Parameters:
+    - frac (float): Fraction of the original dataset to load. Defaults to 1.0, loading the entire dataset.
+    - noface (bool): If True, use the noface dataset. Defaults to True.
+    - balanced (bool): If True, balance the dataset based on the distribution of sign categories. Defaults to False.
+    - num_signs (int or None): Number of random sign categories to include. Defaults to None, including all sign categories.
 
     Returns:
-        DataFrame: subset of the original dataset
+    - DataFrame: Subset of the training data according to the specified parameters.
+
+    Notes:
+    - If balanced is set to True, the dataset is balanced based on the specified number of sign categories (num_signs).
+    - The balanced dataset will have an equal number of samples for each selected sign category, up to the original distribution.
     '''
     train = pd.read_csv(TRAIN_CSV_PATH)
 
@@ -23,27 +38,63 @@ def load_subset_data(frac=1.0, noface=True, balanced=False):
         train[['path']] = train[['path']].apply(lambda x: x.str.replace(
             'train_landmark_files', 'train_landmark_files_noface'))
 
-    train['file_path'] = str(TRAIN_DATA_DIR) + '/' + train['path']
+    train['file_path'] = TRAIN_DATA_DIR + os.path.sep + train['path']
 
-    # random subset of the data by percent
-    if frac < 1:
-        train = train.sample(frac=frac)
-
-    # balance the data
+    # Balance the data if requested
     if balanced:
-        train = balance_data(train)
+        if num_signs is not None:
+            # Randomly select num_signs from all available sign categories in the dataset
+            include_signs = random.sample(list(train['sign'].unique()), num_signs)
+        else:
+            include_signs = train['sign'].unique()
+            num_signs = len(include_signs)
 
-    return train.reset_index(drop=True)
+        # Filter the dataset to include only the selected sign categories
+        train_subset = train[train['sign'].isin(include_signs)]
 
-def balance_data(train):
-    '''
-    Balances the dataset to the smallest class.
-    '''
-    # smallest sign
-    min_sign_count = train['sign'].value_counts().min()
+        # Calculate the target number of samples after balancing
+        initial_size = len(train)
+        target_size = int(initial_size * frac)
+        target_size_per_sign = target_size // num_signs
 
-    # select random sample of min_sign_count
-    return train.groupby('sign').apply(lambda x: x.sample(min_sign_count)).reset_index(drop=True)
+        # Calculate how many samples are remaining after distributing equally among sign categories
+        remaining_samples = target_size % num_signs
+
+        min_size_per_sign = min(train_subset.sign.value_counts()) # min number of elements per sign, in the selected signs
+
+        # If not enough samples, we reduce the sampling size to that value
+        if min_size_per_sign < target_size_per_sign:
+            print(f'Warning: total size smaller than requested, with {min_size_per_sign} per sign instead of {target_size_per_sign}')
+            target_size_per_sign = min_size_per_sign
+            remaining_samples = 0 # don't add extra samples in this case, we put min_size_per_sign for each sign
+
+        # Initiate the data before concatenation
+        remaining_samples_added = 0
+        balanced_data = pd.DataFrame()
+
+        # For each selected sign category, adjust the number of samples to match the target size
+        for sign_category in include_signs:
+            sign_data = train[train['sign'] == sign_category]
+
+            if remaining_samples_added < remaining_samples:
+
+                sign_data = sign_data.sample(target_size_per_sign+1)  # add 1 aditional sample to reach the exact total
+                remaining_samples_added += 1
+            else:
+                sign_data = sign_data.sample(target_size_per_sign) # add aditional sample
+
+            balanced_data = pd.concat([balanced_data, sign_data], ignore_index=True)
+
+        size = len(balanced_data)
+        size_ratio = size / initial_size
+        print(f"Size reduced from {initial_size} to {size} ({size_ratio*100:.1f}%)")
+
+        return balanced_data.reset_index(drop=True)
+
+    else:
+        train = train.sample(frac=frac)
+        return train.reset_index(drop=True)
+
 
 def load_relevant_data_subset(pq_path, noface=True):
     '''
