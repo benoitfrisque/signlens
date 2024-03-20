@@ -8,7 +8,7 @@ from IPython.display import HTML
 from IPython import display
 
 # Importing functions for preprocessing and loading data
-from signlens.preprocessing.preprocess_files import load_relevant_data_subset_per_landmark_type
+from signlens.preprocessing.data import load_relevant_data_subset_per_landmark_type
 
 # Importing modules for landmark detection
 from mediapipe.python.solutions import hands as mp_hands
