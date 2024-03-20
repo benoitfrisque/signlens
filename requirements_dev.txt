@@ -4,3 +4,4 @@ jupyter
 jupyterlab
 pytest
 pylint
+plotly
