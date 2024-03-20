@@ -23,7 +23,7 @@ def pad_sequences(sequence,n_frames=100):
         sequence = sequence[:n_frames]
     return sequence
 
-def group_pad_sequences(df):
+def group_pad_sequences(df,frame=100):
     """
     Group and pad sequences from DataFrame file paths.
 
@@ -43,7 +43,7 @@ def group_pad_sequences(df):
 
     """
     n=len(df.file_path)
-    data = np.empty((n, 100, 75, 3))
+    data = np.empty((n, frame, N_LANDMARKS_NO_FACE, 3))
     for i, file_path in enumerate(df.file_path):
         load_data=load_relevant_data_subset(file_path)
         data[i]=pad_sequences(load_data)

@@ -99,7 +99,7 @@ def load_data_subset_csv(frac=1.0, noface=True, balanced=False, num_signs=None):
         return train.reset_index(drop=True)
 
 
-def load_frame_number_parquet(train, csv_path=TRAIN_CSV_PATH):
+def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
     """
     Enhances the input 'train' DataFrame by adding a 'frame_parquet' column which calculates the number of frames
     for each parquet file referenced in the DataFrame. If a CSV file at the specified path ('csv_path') named 'train_frame.csv'
@@ -121,6 +121,8 @@ def load_frame_number_parquet(train, csv_path=TRAIN_CSV_PATH):
     - Make sure 'TRAIN_DATA_DIR' is defined and accessible in your environment before using this function.
 
     """
+    csv_path=TRAIN_DATA_DIR+"/train_frame.csv"
+
 
     # Check if csv file already exist
     if not os.path.exists(csv_path):
