@@ -69,6 +69,7 @@ def label_dictionnary(df):
     label_map_dict=pd.read_json(LABEL_MAP_PATH, orient='index').to_dict()[0]
     df['sign_encoded'] = df['sign'].map(label_map_dict)
     y_encoded = to_categorical(df['sign_encoded'])
+    df=df.drop(columns="sign_encoded")
     return y_encoded
 
 def xy_generator(train_frame,n_frames=100):

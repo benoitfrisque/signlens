@@ -1,23 +1,29 @@
 import tensorflow as tf
 from tensorflow.keras import Model,Sequential
-from tensorflow.keras.layers import TimeDistributed, LSTM, Dense,Masking, Flatten
+from tensorflow.keras.layers import TimeDistributed, LSTM, Dense,Masking, Flatten, Dropout, SimpleRNN,Reshape
 from tensorflow.keras.callbacks import EarlyStopping
 from typing import Tuple
 from colorama import Fore, Style
 import time
 import numpy as np
+from signlens.params import *
 import matplotlib.pyplot as plt
 
-def Initialize_model(frame=100):
 
-    num_classes=250
+def initialize_model(frame=100,num_classes=250):
+
     model = Sequential()
-    model.add(TimeDistributed(Flatten(), input_shape=(frame, 75, 3)))
-    model.add(LSTM(units=128))
+    model.add(Reshape((frame,N_LANDMARKS_NO_FACE*3),input_shape=(frame,N_LANDMARKS_NO_FACE,3)))
+    model.add(Masking(mask_value=0.0))
+    model.add(SimpleRNN(units=128, return_sequences=True))
+    model.add(Dropout(0.5))
+    model.add(LSTM(units=64))
+    model.add(Dropout(0.5))
+
     model.add(Dense(num_classes, activation='softmax'))
     return model
 
-def Compile_model(model: Model):
+def compile_model(model: Model):
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     return model
 
@@ -51,6 +57,7 @@ def train_model(
         epochs=100,
         batch_size=batch_size,
         callbacks=[es],
+        shuffle=True,
         verbose=verbose
     )
 
@@ -63,7 +70,8 @@ def evaluate_model(
         model: Model,
         X: np.ndarray,
         y: np.ndarray,
-        batch_size=64
+        batch_size=64,
+        verbose=0
     ) -> Tuple[Model, dict]:
     """
     Evaluate trained model performance on the dataset
@@ -79,15 +87,15 @@ def evaluate_model(
         x=X,
         y=y,
         batch_size=batch_size,
-        verbose=0,
+        verbose=verbose,
         # callbacks=None,
         return_dict=True
     )
 
     loss = metrics["loss"]
-    mae = metrics["mae"]
 
-    print(f"✅ Model evaluated, MAE: {round(mae, 2)}")
+
+    print(f"✅ Model evaluated, loss: {round(loss, 2)}")
 
     return metrics
 
