@@ -1,0 +1,6 @@
+ipdb
+ipywidgets
+jupyter
+jupyterlab
+pytest
+pylint
