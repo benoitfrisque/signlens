@@ -24,6 +24,7 @@ def pad_sequences(sequence,n_frames=100):
 def xy_generator(train_frame,n_frames=100):
     '''
     Yields X and y for input to model.fit
+    Use X, y = next(generator) to iterate through all Xs and ys
 
     Args:
         - DataFrame: train_frame
@@ -33,6 +34,6 @@ def xy_generator(train_frame,n_frames=100):
     '''
     for i in train_frame.index:
         X = load_relevant_data_subset(train_frame['file_path'][i])
-        X = pad_sequences(X, n_frames=100)
+        X = pad_sequences(X, n_frames)
         y = np.expand_dims(np.array(y),0)
         yield X, y
