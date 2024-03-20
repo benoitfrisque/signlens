@@ -92,7 +92,7 @@ def load_data_subset_csv(frac=1.0, noface=True, balanced=False, num_signs=None):
         size_ratio = size / initial_size
         print(f"Size reduced from {initial_size} to {size} ({size_ratio*100:.1f}%)")
 
-        return balanced_data.reset_index(drop=True)
+        return balanced_data.sample(frac=1).reset_index(drop=True) # resample to shuffle
 
     else:
         train = train.sample(frac=frac)
