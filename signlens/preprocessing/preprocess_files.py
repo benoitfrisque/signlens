@@ -31,14 +31,14 @@ def load_subset_data(frac=1.0,noface=True,balanced=False):
     if balanced:
         train = balance_data(train)
 
-    return train
+    return train.reset_index(drop=True)
 
 def balance_data(train):
     '''
     Balances the dataset to the smallest class.
     '''
     # smallest sign
-    min_sign_count = train['sign'].value_counts().sort_values().min()
+    min_sign_count = train['sign'].value_counts().min()
 
     # select random sample of min_sign_count
     return train.groupby('sign').apply(lambda x: x.sample(min_sign_count)).reset_index(drop=True)
