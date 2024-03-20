@@ -4,9 +4,10 @@ import numpy as np
 from tqdm import tqdm  # Import tqdm for the progress bar
 import os
 from colorama import Fore, Style
+
 from signlens.params import *
 
-def load_subset_data(frac=1.0,noface=True,balanced=False):
+def load_subset_data(frac=1.0, noface=True, balanced=False):
     '''
     Load subset of data based on the fraction of the original dataset.
     Uses the noface dataset if noface is set to True.
@@ -21,6 +22,7 @@ def load_subset_data(frac=1.0,noface=True,balanced=False):
     if noface:
         train[['path']] = train[['path']].apply(lambda x: x.str.replace(
             'train_landmark_files', 'train_landmark_files_noface'))
+
     train['file_path'] = str(TRAIN_DATA_DIR) + '/' + train['path']
 
     # random subset of the data by percent
@@ -43,7 +45,7 @@ def balance_data(train):
     # select random sample of min_sign_count
     return train.groupby('sign').apply(lambda x: x.sample(min_sign_count)).reset_index(drop=True)
 
-def load_relevant_data_subset(pq_path,noface=True):
+def load_relevant_data_subset(pq_path, noface=True):
     '''
     loads the relevant data from the parquet file.
     If noface is set to True, it excludes landmark 'face'.
@@ -56,23 +58,29 @@ def load_relevant_data_subset(pq_path,noface=True):
         NumPy array: NumPy array containing filtered landmarks.
     '''
     data_columns = ['x', 'y', 'z', 'type']  # Include the 'type' column
+
     data = pd.read_parquet(pq_path, columns=data_columns)
 
-    # ROWS_PER_FRAME = 543  from documentation
-    frame_rows = 543
     if noface:
         # Exclude rows where 'type' is 'face'
+        data = filter_out_landmarks(pq_path, landmark_types_to_remove=['face'], data_columns=data_columns)
+
         data = data[data['type'] != 'face']
         # N_LANDMARKS_NOFACE 75
-        frame_rows = 75
+        frame_rows = N_LANDMARKS_NO_FACE
+
+    else:
+        frame_rows = N_LANDMARKS_ALL
+
     data = data.drop(columns=['type'])
     data_columns = data_columns[:-1]
 
     # Replace NaN values with 0
     data.fillna(0, inplace=True)
     n_frames = int(len(data) / frame_rows)
-    n_dim=len(data_columns)
+    n_dim = len(data_columns)
     data = data.values.reshape(n_frames, frame_rows, n_dim)
+
     return data.astype(np.float32)
 
 def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
@@ -98,7 +106,7 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
 
     """
 
-    csv_filename=csv_path+"/train_frame.csv"
+    csv_filename = csv_path + "/train_frame.csv"
     # Check if csv file already exist
     if not os.path.exists(csv_filename):
         # If not existing create the column and save the data frame
@@ -114,7 +122,7 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
 
     return train
 
-def filter_out_parquet_frame(df,n_frame=100):
+def filter_out_parquet_frame(df, n_frame=100):
     """
     Filters the DataFrame by the 'frame_parquet' column to include only rows where the number of frames is less than or equal to the specified threshold.
     This function is intended to be used on DataFrames that have already been processed by the 'load_frame_number_parquet'
@@ -130,6 +138,31 @@ def filter_out_parquet_frame(df,n_frame=100):
 
     """
     return df[df["frame_parquet"]<=n_frame].reset_index(drop=True)
+
+def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_columns=None):
+    """
+    Filters out specific landmark types from a parquet file.
+
+    Args:
+        parquet_file_path (str or Path): Path to the input parquet file.
+        landmark_types_to_remove (list of str): List of landmark types to be removed.
+        data_columns (list of str, optional)
+
+    Returns:
+        DataFrame: DataFrame containing filtered landmarks.
+    """
+    if data_columns is None:
+        landmarks = pd.read_parquet(parquet_file_path)
+    else:
+        landmarks = pd.read_parquet(parquet_file_path, columns=data_columns)
+
+    filtered_landmarks = landmarks.copy()
+
+    for landmark_type in landmark_types_to_remove:
+        filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
+
+    return filtered_landmarks
+
 
 def load_relevant_data_subset_per_landmark_type(pq_path):
     """
