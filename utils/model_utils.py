@@ -57,9 +57,9 @@ def plot_history(history, metric='accuracy', title=None):
     plt.show()
 
 
-def plot_history_interactive_y(history, metric='accuracy', title=None):
+def plot_history_interactive(history, metric='accuracy', title=None):
     """
-    Plot training history of a neural network model with interactive y-axis limits.
+    Plot training history of a neural network model with interactive axis limits.
 
     Parameters:
     - history (keras.callbacks.History): History object returned by the fit method of a Keras model.
@@ -67,10 +67,10 @@ def plot_history_interactive_y(history, metric='accuracy', title=None):
     - title (str): Optional title for the plot.
 
     Returns:
-    - None: This function plots the training history but does not return any value.
+    - Plots with interactive widgets.
     """
 
-    def plot_hist(y_min, y_max):
+    def plot_hist(y_min, y_max, epoch_min, epoch_max):
         # Setting figures
         fig, (ax1, ax2) = plt.subplots(1,2, figsize=(13,4))
 
@@ -79,7 +79,7 @@ def plot_history_interactive_y(history, metric='accuracy', title=None):
         ax1.plot(history.history['val_loss'])
 
         ax2.plot(history.history[metric])
-        ax2.plot(history.history['val_'+metric])
+        ax2.plot(history.history['val_' + metric])
 
         # Set titles and labels
         ax1.set_title('Model loss')
@@ -93,6 +93,10 @@ def plot_history_interactive_y(history, metric='accuracy', title=None):
         # Generate legends
         ax1.legend(['Train', 'Validation'], loc='best')
         ax2.legend(['Train', 'Validation'], loc='best')
+
+
+        ax1.set_xlim(epoch_min, epoch_max)
+        ax2.set_xlim(epoch_min, epoch_max)
 
         ax1.set_ylim(y_min, y_max)
         ax2.set_ylim(y_min, y_max)
@@ -126,4 +130,22 @@ def plot_history_interactive_y(history, metric='accuracy', title=None):
         continuous_update=False
     )
 
-    return interact(plot_hist, y_min=y_min_slider, y_max=y_max_slider)
+    epoch_min_slider = FloatSlider(
+        value=0,
+        min=0,
+        max=len(history.history['loss'])-2,
+        step=1,
+        description='Min epoch:',
+        continuous_update=False
+    )
+
+    epoch_max_slider = FloatSlider(
+        value=len(history.history['loss'])-1,
+        min=1,
+        max=len(history.history['loss'])-1,
+        step=1,
+        description='Max epoch:',
+        continuous_update=False
+    )
+
+    return interact(plot_hist, y_min=y_min_slider, y_max=y_max_slider, epoch_min=epoch_min_slider, epoch_max=epoch_max_slider)
