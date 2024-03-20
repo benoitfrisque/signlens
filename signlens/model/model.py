@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import Model,Sequential
 from tensorflow.keras.layers import TimeDistributed, LSTM, Dense,Masking, Flatten, Dropout, SimpleRNN,Reshape
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam
 from typing import Tuple
 from colorama import Fore, Style
 import time
@@ -13,8 +14,11 @@ import matplotlib.pyplot as plt
 def initialize_model(frame=100,num_classes=250):
 
     model = Sequential()
+
     model.add(Reshape((frame,N_LANDMARKS_NO_FACE*3),input_shape=(frame,N_LANDMARKS_NO_FACE,3)))
     model.add(Masking(mask_value=0.0))
+
+
     model.add(SimpleRNN(units=128, return_sequences=True))
     model.add(Dropout(0.5))
     model.add(LSTM(units=64))
@@ -23,8 +27,10 @@ def initialize_model(frame=100,num_classes=250):
     model.add(Dense(num_classes, activation='softmax'))
     return model
 
-def compile_model(model: Model):
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+def compile_model(model: Model,learning_rate=0.001):
+
+    optimizer=Adam(learning_rate=learning_rate)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
     return model
 
 def train_model(
@@ -98,22 +104,3 @@ def evaluate_model(
     print(f"✅ Model evaluated, loss: {round(loss, 2)}")
 
     return metrics
-
-def plot_history(history):
-    # Accuracy values
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title('Model accuracy')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Validation'], loc='upper left')
-    plt.show()
-
-    # Loss values
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('Model loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Validation'], loc='upper left')
-    plt.show()

@@ -55,15 +55,11 @@ def label_dictionnary(df):
 
     Parameters:
     - df (pandas.DataFrame): DataFrame containing the 'sign' column to be encoded.
-    - LABEL_MAP_PATH (str): Path to the JSON file containing the label map dictionary.
-
     Returns:
     - numpy.ndarray: One-hot encoded representations of the 'sign' column.
 
-    This function loads a label map dictionary from a JSON file specified by LABEL_MAP_PATH.
-    It then maps the 'sign' column in the DataFrame to the encoded values using this dictionary.
-    Finally, it converts the encoded values to one-hot encoded vectors using TensorFlow's
-    to_categorical function.
+    This function loads converts the encoded values to one-hot encoded vectors using OnehotEncoder
+    from sklearn.
     """
     encoder = OneHotEncoder()
     encoded_data = encoder.fit_transform(df[['sign']])
