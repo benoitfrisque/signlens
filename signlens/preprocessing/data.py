@@ -1,18 +1,13 @@
-from pathlib import Path
-from termios import N_SLIP
+# from pathlib import Path
+# from termios import N_SLIP
 import pandas as pd
 import numpy as np
-import math
+import random
 from tqdm import tqdm  # Import tqdm for the progress bar
 import os
 from colorama import Fore, Style
 
 from signlens.params import *
-
-
-
-import pandas as pd
-import random
 
 ################################################################################
 # LOAD CSV
@@ -64,7 +59,9 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         # Filter the dataset to include only the selected sign categories
         if n_classes is not None:
             # Randomly select n_classes from all available classes in the dataset
-            include_classes = random.sample(list(train['sign'].unique()), n_classes)
+            # include_classes = random.sample(list(train['sign'].unique()), n_classes)
+            all_classes = load_glossary()
+            include_classes = all_classes[:n_classes]['sign'].to_list()
             train = train[train['sign'].isin(include_classes)]
             new_size = len(train)
             size_ratio = new_size / size
@@ -223,7 +220,22 @@ def filter_sequences_with_missing_frames(df, threshold=10):
 
     return df[delta < threshold].reset_index(drop=True)
 
+################################################################################
+# LOAD GLOSSARY CSV
+################################################################################
 
+def load_glossary(csv_path=GLOSSARY_CSV_PATH):
+    """
+    Load a glossary from a CSV file into a pandas DataFrame.
+
+    Parameters:
+    - csv_path (str): The file path to the CSV file containing the glossary. Default is GLOSSARY_CSV_PATH.
+
+    Returns:
+    pandas.DataFrame: A DataFrame containing the loaded glossary data.
+    """
+
+    return pd.read_csv(csv_path)
 
 ################################################################################
 # LOAD PARQUET FILES
