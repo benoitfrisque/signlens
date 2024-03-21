@@ -9,7 +9,7 @@ install_requirements_dev:
 	@make -s install_requirements
 	@pip install -r requirements_dev.txt
 	@if [ $$(uname) = "Darwin" ]; then \
-				@brew install ffmpeg; \
+				brew install ffmpeg; \
     else \
         @sudo apt-get install ffmpeg; \
     fi
