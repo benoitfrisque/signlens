@@ -58,8 +58,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
     if balanced:
         # Filter the dataset to include only the selected sign categories
         if n_classes is not None:
-            # Randomly select n_classes from all available classes in the dataset
-            # include_classes = random.sample(list(train['sign'].unique()), n_classes)
+            # Select the first n_classes from the glossary
             all_classes = load_glossary()
             include_classes = all_classes[:n_classes]['sign'].to_list()
             train = train[train['sign'].isin(include_classes)]
