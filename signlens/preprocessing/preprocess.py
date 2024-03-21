@@ -84,3 +84,43 @@ def xy_generator(train_frame, n_frames=MAX_SEQ_LEN):
         X = pad_sequences(X, n_frames)
         y = np.expand_dims(np.array(train_frame['sign'][i]),0)
         yield X, y
+
+def x_generator(train_frame,n_frames=MAX_SEQ_LEN):
+    '''
+    Yields X for input to model.fit
+
+    Args:
+        - DataFrame: train_frame
+        - int: number of frames
+    Returns:
+        - generator: X
+    '''
+    for i in train_frame.index:
+        X = load_relevant_data_subset(train_frame['file_path'][i])
+        X = pad_sequences(X, n_frames)
+        yield X #, y
+
+def y_generator(train_frame):
+    '''
+    Yields y for input to model.fit
+
+    Args:
+        - DataFrame: train_frame
+        - int: number of frames
+    Returns:
+        - generator: X and y
+    '''
+    for i in train_frame.index:
+        y = np.expand_dims(np.array(train_frame['sign'][i]),0)
+        yield y
+
+def batch_from_generator(gen, batch_size):
+    '''
+    Args:
+        - generator: x_generator or y_generator
+    Returns:
+        - numpy.ndarray: batch
+    '''
+    # TO DO: check for len(train_frame) > batch_size
+    batch = [ next(gen) for i in range(batch_size)]
+    return np.array(batch)
