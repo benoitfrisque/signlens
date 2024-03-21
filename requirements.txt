@@ -15,4 +15,4 @@ colorama
 typing
 tqdm
 direnv
-spicy
+scipy
