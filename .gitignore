@@ -1,5 +1,5 @@
 raw_data/
-results/
+training_outputs/
 .python-version
 .env
 
