@@ -35,6 +35,8 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, num_signs=
     - The balanced dataset will have an equal number of samples for each selected sign category, up to the original distribution.
     '''
     train = pd.read_csv(TRAIN_CSV_PATH)
+    train=filter_out_parquet_frame(load_frame_number_parquet(train))
+
 
     # replace path train_landmark_files with train_landmark_files_noface
     if noface:
@@ -130,11 +132,11 @@ def load_frame_number_parquet(train, csv_path=TRAIN_DATA_DIR):
         for i in range(len(train)):
             df = pd.read_parquet(train.loc[i, "file_path"]).copy()
             train.at[i, "frame_parquet"] = df["frame"].iloc[-1] - df["frame"].iloc[0] + 1
-        train.to_csv(csv_path, index=False)
+        train[["sequence_id","frame_parquet"]].to_csv(csv_path, index=False)
         print(f" ✅ File has been saved at : {csv_path}")
     else:
         full_df = pd.read_csv(csv_path)
-        train = full_df[full_df['sequence_id'].isin(train['sequence_id'])]
+        train = pd.merge(train,full_df,how="left")
         print("File already exists, loaded matching 'sequence_id' rows.")
 
     return train

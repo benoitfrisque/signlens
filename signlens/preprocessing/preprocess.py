@@ -5,7 +5,7 @@ from signlens.params import *
 from signlens.preprocessing.data import *
 # from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import OneHotEncoder
-
+from scipy.sparse import csr_matrix
 
 def pad_sequences(sequence, n_frames=MAX_SEQ_LEN):
     '''
@@ -42,12 +42,13 @@ def group_pad_sequences(df, n_frames=MAX_SEQ_LEN):
     - 3 represents the number of positions(x,y and z)).
 
     """
-    n=len(df.file_path)
-    data = np.empty((n, n_frames, N_LANDMARKS_NO_FACE, 3))
-    for i, file_path in enumerate(df.file_path):
+    n=len(df)
+    data_sparse=[]
+    for i, file_path in enumerate(df):
         load_data=load_relevant_data_subset(file_path)
-        data[i]=pad_sequences(load_data)
-    return data
+        padded_data = pad_sequences(load_data)
+        data_sparse.append(csr_matrix(padded_data.reshape(-1)))
+    return data_sparse
 
 def label_dictionnary(df):
     """
