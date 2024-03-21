@@ -3,11 +3,13 @@ import numpy as np
 
 ##################  VARIABLES  ##################
  # Number of classes to analyze
-if os.environ.get("NUM_CLASSES") == 'all': NUM_CLASSES = 250
-else: NUM_CLASSES = int(os.environ.get("NUM_CLASSES"))
+if os.environ.get("NUM_CLASSES") == 'all':
+    NUM_CLASSES = 250
+else:
+    NUM_CLASSES = int(os.environ.get("NUM_CLASSES"))
 
-# Max number of frames in a sequence, Used to pad sequences, and also filter out sequences
-MAX_SEQ_LEN = float(os.environ.get("MAX_SEQ_LEN"))
+# Max number of frames in a sequence. Used to pad sequences, and also filter out sequences
+MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN"))
 
 # Percentage of the data to load
 DATA_FRAC = float(os.environ.get("DATA_FRAC"))
