@@ -23,6 +23,8 @@ TRAIN_CSV_PATH   = os.path.join(TRAIN_DATA_DIR, 'train.csv')
 LANDMARK_DIR     = os.path.join(TRAIN_DATA_DIR,'train_landmark_files')
 LABEL_MAP_PATH   = os.path.join(TRAIN_DATA_DIR,'sign_to_prediction_index_map.json')
 
+GLOSSARY_CSV_PATH = os.path.join(TRAIN_DATA_DIR, 'glossary.csv')
+
 
 MODEL_DIR        = os.path.join(BASE_DIR, 'training_outputs', 'models')
 
