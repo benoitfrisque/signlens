@@ -1,7 +1,7 @@
 raw_data/
+results/
 .python-version
 .env
-
 
 # OS generated files #
 ######################
@@ -23,7 +23,9 @@ __pycache__
 *.csv
 *.zip
 *.parquet
-mlruns
 *.sqlite
+*.h5
+.csv
+
 # IDE #
 *.vscode
