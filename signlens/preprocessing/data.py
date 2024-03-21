@@ -13,7 +13,7 @@ from signlens.params import *
 # LOAD CSV
 ################################################################################
 
-def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=NUM_CLASSES, n_frames=MAX_SEQ_LEN):
+def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=NUM_CLASSES, n_frames=MAX_SEQ_LEN, test_size=0.2):
     '''
     Load a data subset, as a fraction of the original dataset. It can be balanced, and the number of classes can be limited.
 
@@ -32,6 +32,8 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
     - The balanced dataset will have an equal number of samples for each selected class, up to the original distribution.
     '''
     train = pd.read_csv(TRAIN_CSV_PATH)
+
+
 
     total_size = len(train) # total size
     size = total_size # current size (will be modified by the filters)

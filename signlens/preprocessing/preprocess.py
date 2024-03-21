@@ -48,7 +48,7 @@ def group_pad_sequences(df, n_frames=MAX_SEQ_LEN):
         load_data=load_relevant_data_subset(file_path)
         padded_data = pad_sequences(load_data)
         data_sparse.append(csr_matrix(padded_data.reshape(-1)))
-    return data_sparse
+    return np.array([matrix.toarray().reshape(100, 75, 3) for matrix in data_sparse])
 
 def label_dictionnary(df):
     """

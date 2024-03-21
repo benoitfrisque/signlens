@@ -11,6 +11,7 @@ from signlens.params import *
 import matplotlib.pyplot as plt
 
 
+
 def initialize_model(frame=100,num_classes=250):
 
     model = Sequential()
@@ -48,7 +49,12 @@ def train_model(
     Fit the model and return a tuple (fitted_model, history)
     """
     print(Fore.BLUE + "\nTraining model..." + Style.RESET_ALL)
-
+    # Generate a unique folder name using current timestamp
+    timestamp = int(time.time())  # Get current timestamp
+    folder_name = f"model_fit_at_{timestamp}"  # Generate folder name
+    # Create a new directory with the generated name
+    os.mkdir(MODEL_DIR + os.path.sep+folder_name)
+    # Return the name of the created folder
     es = EarlyStopping(
         monitor="val_loss",
         patience=patience,
@@ -57,10 +63,10 @@ def train_model(
     )
 
     modelCheckpoint = ModelCheckpoint(
-    MODEL_DIR + os.path.sep + "model_epoch_{epoch:02d}.keras",
+    MODEL_DIR + os.path.sep+ folder_name + os.path.sep+"model_epoch_{epoch:02d}.keras",
     monitor="val_accuracy",
     verbose=0,
-    save_freq=10*int(X.shape[0]/batch_size)
+    save_freq=1*int(X.shape[0]/batch_size)+1
     )
     LRreducer = ReduceLROnPlateau(monitor="val_accuracy", factor = 0.1, patience=5, verbose=1, min_lr=1e-6) #
 
@@ -69,7 +75,7 @@ def train_model(
         y,
         validation_data=validation_data,
         validation_split=validation_split,
-        epochs=100,
+        epochs=10,
         batch_size=batch_size,
         callbacks=[es,modelCheckpoint,LRreducer],
         shuffle=True,
