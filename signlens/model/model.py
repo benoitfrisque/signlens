@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import Model,Sequential
-from tensorflow.keras.layers import TimeDistributed, LSTM, Dense,Masking, Flatten, Dropout, SimpleRNN,Reshape
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import TimeDistributed, LSTM, Dense,Masking, Flatten, Dropout, SimpleRNN,Reshape, Bidirectional
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from typing import Tuple
 from colorama import Fore, Style
@@ -21,6 +21,7 @@ def initialize_model(frame=100,num_classes=250):
 
     model.add(SimpleRNN(units=128, return_sequences=True))
     model.add(Dropout(0.5))
+
     model.add(LSTM(units=64))
     model.add(Dropout(0.5))
 
@@ -55,6 +56,14 @@ def train_model(
         verbose=1
     )
 
+    modelCheckpoint = ModelCheckpoint(
+    MODEL_DIR + os.path.sep + "model_epoch_{epoch:02d}.keras",
+    monitor="val_accuracy",
+    verbose=0,
+    save_freq=10*int(X.shape[0]/batch_size)
+    )
+    LRreducer = ReduceLROnPlateau(monitor="val_accuracy", factor = 0.1, patience=5, verbose=1, min_lr=1e-6) #
+
     history = model.fit(
         X,
         y,
@@ -62,7 +71,7 @@ def train_model(
         validation_split=validation_split,
         epochs=100,
         batch_size=batch_size,
-        callbacks=[es],
+        callbacks=[es,modelCheckpoint,LRreducer],
         shuffle=True,
         verbose=verbose
     )

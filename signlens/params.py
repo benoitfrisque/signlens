@@ -23,6 +23,9 @@ TRAIN_CSV_PATH   = os.path.join(TRAIN_DATA_DIR, 'train.csv')
 LANDMARK_DIR     = os.path.join(TRAIN_DATA_DIR,'train_landmark_files')
 LABEL_MAP_PATH   = os.path.join(TRAIN_DATA_DIR,'sign_to_prediction_index_map.json')
 
+
+MODEL_DIR        = os.path.join(BASE_DIR, 'training_outputs', 'models')
+
 N_LANDMARKS_HAND    = 21
 N_LANDMAKRS_POSE    = 33
 N_LANDMARKS_FACE    = 468
