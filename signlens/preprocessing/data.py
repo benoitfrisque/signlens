@@ -99,9 +99,6 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         # For each selected sign category, adjust the number of samples to match the target size
         for class_ in include_classes:
             train_class = train[train['sign'] == class_]
-            if len(train_class) == 0:
-                import ipdb; ipdb.set_trace()
-
             if remaining_samples_added < remaining_samples:
                 train_class = train_class.sample(target_size_per_class + 1, random_state=random_state)  # add 1 aditional sample to reach the exact total
                 remaining_samples_added += 1
