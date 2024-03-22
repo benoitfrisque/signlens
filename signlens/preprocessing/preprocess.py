@@ -96,3 +96,37 @@ def label_dictionnary(df):
     encoded_data = encoder.fit_transform(df[['sign']])
     y_encoded = encoded_data.toarray()
     return y_encoded
+
+
+def decode_labels(y):
+    """
+    Decodes predicted labels from a probability matrix using a provided glossary.
+
+    Args:
+    - y (numpy.ndarray): Probability matrix where each row represents probabilities for different labels.
+
+    Returns:
+    - predicted_words (list): Predicted labels corresponding to the maximum probability in each row.
+    - predict_proba (numpy.ndarray): Maximum probabilities for each row.
+    """
+    glossary = load_glossary()
+
+
+    # Check if y is a numpy array
+    if not isinstance(y, np.ndarray):
+        raise ValueError("Input 'y' must be a NumPy array.")
+
+    # Check if glossary contains 'sign' column
+    if isinstance(glossary, dict):
+        raise ValueError("Glossary should be a DataFrame if it contains 'sign' column.")
+
+    # Get the index of the maximum value for each row
+    max_indices = np.argmax(y, axis=1)
+
+    # Get the maximum value for each row
+    predict_proba = np.max(y, axis=1)
+
+    # Get predicted words using glossary and max indices
+    predicted_words = [glossary.iloc[index]['sign'] for index in max_indices]
+
+    return predicted_words, predict_proba
