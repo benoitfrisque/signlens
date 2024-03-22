@@ -112,7 +112,7 @@ def train_model(
         output_folder + os.path.sep + "model_epoch_{epoch:02d}.keras",
         monitor="val_accuracy",
         verbose=0,
-        save_freq=(1 * int(X.shape[0] / batch_size)) + 1
+        save_freq=(10 * int(X.shape[0] / batch_size)) + 1
     )
     LRreducer = ReduceLROnPlateau(
         monitor="val_accuracy", factor=0.5, patience=patience-1, verbose=1, min_lr=1e-6)

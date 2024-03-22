@@ -26,13 +26,13 @@ def save_results(params: dict, metrics: dict) -> None:
 
     # Save params locally
     if params is not None:
-        params_path = os.path.join(TRAINING_DIR, "params", timestamp + ".pickle")
+        params_path = os.path.join(TRAIN_OUTPUT_DIR, "params", timestamp + ".pickle")
         with open(params_path, "wb") as file:
             pickle.dump(params, file)
 
     # Save metrics locally
     if metrics is not None:
-        metrics_path = os.path.join(TRAINING_DIR, "metrics", timestamp + ".pickle")
+        metrics_path = os.path.join(TRAIN_OUTPUT_DIR, "metrics", timestamp + ".pickle")
         with open(metrics_path, "wb") as file:
             pickle.dump(metrics, file)
 
@@ -64,7 +64,7 @@ def load_model() -> keras.Model:
 
     latest_model = keras.models.load_model(most_recent_model_path_on_disk)
 
-    print("✅ Model loaded from local disk")
+    print(f"✅ Model loaded from local disk {most_recent_model_path_on_disk}")
 
     return latest_model
 
