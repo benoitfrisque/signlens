@@ -62,6 +62,7 @@ def train_model(
     model: Model,
     X: np.ndarray,
     y: np.ndarray,
+    model_save_epoch_path,
     batch_size=256,
     patience=10,
     epochs=100,
@@ -106,10 +107,8 @@ def train_model(
         verbose=1
     )
 
-    output_folder = create_output_folder()
-
     checkpoint = ModelCheckpoint(
-        output_folder + os.path.sep + "model_epoch_{epoch:02d}.keras",
+        model_save_epoch_path + os.path.sep + "model_epoch_{epoch:02d}.keras",
         monitor="val_accuracy",
         verbose=0,
         save_freq=(10 * int(X.shape[0] / batch_size)) + 1
@@ -134,17 +133,6 @@ def train_model(
     print(history)
 
     return model, history
-
-
-def create_output_folder():
-    # Generate a unique folder name using current timestamp
-    timestamp = int(time.time())  # Get current timestamp
-    folder_name = f"model_fit_at_{timestamp}"  # Generate folder name
-    # Create a new directory with the generated name
-    folder_path = MODEL_DIR + os.path.sep + folder_name
-    os.mkdir(folder_path)
-
-    return folder_path
 
 
 def evaluate_model(
