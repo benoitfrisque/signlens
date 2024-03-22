@@ -35,7 +35,7 @@ def create_folder_model():
     paths = {}
 
     # Define subdirectories
-    subdirs = ['model', 'plot', 'log', 'metrics', 'params']
+    subdirs = ['model', 'plots', 'log', 'metrics', 'params']
 
     # Create subdirectories and store their paths
     for subdir in subdirs:
