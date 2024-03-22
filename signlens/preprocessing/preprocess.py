@@ -1,11 +1,13 @@
 import pandas as pd
 import numpy as np
+import multiprocessing as mp
+import tensorflow as tf
 from colorama import Fore, Style
-from signlens.params import *
-from signlens.preprocessing.data import *
-# from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import OneHotEncoder
 from scipy.sparse import csr_matrix
+
+from signlens.params import *
+from signlens.preprocessing.data import load_relevant_data_subset
 
 def pad_sequences(sequence, n_frames=MAX_SEQ_LEN):
     '''
@@ -23,32 +25,60 @@ def pad_sequences(sequence, n_frames=MAX_SEQ_LEN):
         sequence = sequence[:n_frames]
     return sequence
 
-def group_pad_sequences(df, n_frames=MAX_SEQ_LEN):
+
+def load_and_pad(pq_file_path):
     """
-    Group and pad sequences from DataFrame file paths.
+    Load data from a parquet file and pad the sequence.
 
     Parameters:
-    - df (pandas.DataFrame): DataFrame containing file paths.
+    - pq_file_path (str): Path to the parquet file.
 
     Returns:
-    - numpy.ndarray: 4D array of grouped and padded sequences.
-
-    This function takes a DataFrame `df` containing file paths and loads relevant data subsets
-    using `load_relevant_data_subset` function for each file path. It then pads the sequences to
-    ensure uniform length and shapes them into a 4D numpy array of shape (n, n_frames, N_LANDMARKS_NO_FACE, 3), where:
-    - n is the number of file paths in the DataFrame.
-    - n_frames is the number of frames.
-    - N_LANDMARKS_NO_FACE is the number of landmarks.
-    - 3 represents the number of positions(x,y and z)).
-
+    - numpy.ndarray: Padded data reshaped into a 1D array.
     """
-    n=len(df)
-    data_sparse=[]
-    for i, file_path in enumerate(df):
-        load_data=load_relevant_data_subset(file_path)
-        padded_data = pad_sequences(load_data)
-        data_sparse.append(csr_matrix(padded_data.reshape(-1)))
-    return np.array([matrix.toarray().reshape(100, 75, 3) for matrix in data_sparse])
+    # Load data from the file
+    load_data = load_relevant_data_subset(pq_file_path)
+
+    # Pad the sequence
+    padded_data = pad_sequences(load_data)
+
+    # Reshape the data into a 1D array and return it
+    return padded_data.reshape(-1)
+
+def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
+    """
+    Load data from multiple files, pad the sequences, and group them into a single array.
+    If an error occurs during multiprocessing, falls back to sequential processing.
+
+    Parameters:
+    - pq_file_path_df (pandas.DataFrame): DataFrame containing file paths.
+    - n_frames (int, optional): Number of frames. Defaults to MAX_SEQ_LEN.
+
+    Returns:
+    - tf.Tensor: 3D tensor of grouped and padded sequences.
+
+    Raises:
+    - Exception: If an error occurs during the loading or padding process.
+    """
+
+    try:
+        # Create a pool of worker processes
+        with mp.Pool(mp.cpu_count()) as pool:
+            # Use the pool to apply `load_and_pad` to each file path in `df` in parallel
+            data = pool.map(load_and_pad, pq_file_path_df)
+    except Exception as e:
+        print(f"An error occurred with multiprocessing: {e}")
+        print("Falling back to sequential processing...")
+
+        # Fallback to sequential processing
+        data = [load_and_pad(file_path) for file_path in pq_file_path_df]
+
+    # Reshape the data into a 3D array and return it
+    data_reshaped = np.array([item.reshape(n_frames, N_LANDMARKS_NO_FACE * 3) for item in data])
+    data_tf = tf.convert_to_tensor(data_reshaped)
+
+    return data_tf
+
 
 def label_dictionnary(df):
     """
@@ -66,62 +96,3 @@ def label_dictionnary(df):
     encoded_data = encoder.fit_transform(df[['sign']])
     y_encoded = encoded_data.toarray()
     return y_encoded
-
-def xy_generator(train_frame, n_frames=MAX_SEQ_LEN):
-    '''
-    Yields X and y for input to model.fit
-    Use example to iterate through all Xs and ys:
-        xy = xy_generator(train_frame, 10)
-        X,y = next(xy)
-        print(X, y)
-    Args:
-        - DataFrame: train_frame
-        - int: number of frames
-    Returns:
-        - generator: X and y
-    '''
-    for i in train_frame.index:
-        X = load_relevant_data_subset(train_frame['file_path'][i])
-        X = pad_sequences(X, n_frames)
-        y = np.expand_dims(np.array(train_frame['sign'][i]),0)
-        yield X, y
-
-def x_generator(train_frame,n_frames=MAX_SEQ_LEN):
-    '''
-    Yields X for input to model.fit
-
-    Args:
-        - DataFrame: train_frame
-        - int: number of frames
-    Returns:
-        - generator: X
-    '''
-    for i in train_frame.index:
-        X = load_relevant_data_subset(train_frame['file_path'][i])
-        X = pad_sequences(X, n_frames)
-        yield X #, y
-
-def y_generator(train_frame):
-    '''
-    Yields y for input to model.fit
-
-    Args:
-        - DataFrame: train_frame
-        - int: number of frames
-    Returns:
-        - generator: X and y
-    '''
-    for i in train_frame.index:
-        y = np.expand_dims(np.array(train_frame['sign'][i]),0)
-        yield y
-
-def batch_from_generator(gen, batch_size):
-    '''
-    Args:
-        - generator: x_generator or y_generator
-    Returns:
-        - numpy.ndarray: batch
-    '''
-    # TO DO: check for len(train_frame) > batch_size
-    batch = [ next(gen) for i in range(batch_size)]
-    return np.array(batch)
