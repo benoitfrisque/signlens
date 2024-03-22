@@ -22,11 +22,22 @@ create_virtual_env:
 
 create_output_dir:
 	@mkdir -p training_outputs
-	@mkdir -p training_outputs/metrics
-	@mkdir -p training_outputs/models
-	@mkdir -p training_outputs/params
-	@mkdir -p training_outputs/logs
+
 
 reset_output_dir:
 	@rm -rf training_outputs
 	@make -s create_output_dir
+
+run_preprocess:
+	python -c 'from signlens.interface.main import preprocess; preprocess()'
+
+run_train:
+	python -c 'from signlens.interface.main import train; train()'
+
+#run_pred:
+#python -c 'from signlens.interface.main import pred; pred()'
+
+run_evaluate:
+	python -c 'from signlens.interface.main import evaluate; evaluate()'
+
+run_all: run_train run_evaluate
