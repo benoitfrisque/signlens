@@ -35,6 +35,8 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
     if not os.path.exists(csv_path):
         return ValueError(f"❌ File {csv_path} does not exist. Did you do the train_test_split?.")
 
+    print(Fore.BLUE + f"Loading data subset from {os.path.basename(csv_path)}" + Style.RESET_ALL)
+
     train = pd.read_csv(csv_path) # load the specified document
 
     total_size = len(train) # total size
@@ -46,8 +48,9 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
             'train_landmark_files', 'train_landmark_files_noface'))
 
     train['file_path'] = TRAIN_DATA_DIR + os.path.sep + train['path']
+    if 'n_frames' not in train.columns or 'n_frames2' not in train.columns:
+        train = load_frame_number_parquet(train, csv_path=TRAIN_CSV_PATH) # Add n_frames column
 
-    train = load_frame_number_parquet(train, csv_path) # Add n_frames column
     train = filter_sequences_with_missing_frames(train) # Filter out sequences with missing frames
 
     # Filter out parquet files with more than n_frames
@@ -152,8 +155,7 @@ def unique_train_test_split():
 
     print(Fore.BLUE + "\nLoading training test set" + Style.RESET_ALL)
     all_data = load_data_subset_csv(frac=1, noface=False, balanced=False, n_classes=250, n_frames=None, random_state=None, csv_path=TRAIN_CSV_PATH)
-    difference = all_data.merge(test_data, how='outer', indicator=True)
-    train_data = difference[difference['_merge'] == 'left_only']
+    train_data = all_data[~all_data.isin(test_data)]
 
     total_len = len(all_data)
     train_len = len(train_data)
@@ -195,7 +197,6 @@ def load_frame_number_parquet(train, csv_path):
     - 'n_frames2' is the number of frames from start to end in the parquet file.
     - If 'n_frames' and 'n_frames2' are not equal, a warning is printed indicating that the parquet file might have missing frames.
     """
-    # Rest of the function code...
 
     dir_path = os.path.dirname(csv_path)
     filename, file_extension = os.path.splitext(os.path.basename(csv_path))
@@ -203,7 +204,7 @@ def load_frame_number_parquet(train, csv_path):
     frame_csv_path = os.path.join(dir_path, new_filename)
 
     # Check if csv file already exists
-    if not os.path.exists(frame_csv_path ):
+    if not os.path.exists(frame_csv_path):
 
         train_with_frame_count = train.copy()
         # If not existing create the column and save the data frame
