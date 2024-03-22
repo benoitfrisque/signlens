@@ -4,7 +4,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from signlens.preprocessing.registry import load_model
-from signlens.preprocessing.preprocess import group_pad_sequences
+from signlens.preprocessing.preprocess import group_pad_sequences, decode_labels
 from signlens.preprocessing.data import load_relevant_data_subset
 
 app = FastAPI()
@@ -30,7 +30,8 @@ app.state.model = load_model(model_name) # load the model with the above-importe
 # async def predict(pq_path: str):
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+#async def predict(file: UploadFile = File(...)):
+async def predict(pq_path: str):
 
     model = app.state.model
 
@@ -38,7 +39,7 @@ async def predict(file: UploadFile = File(...)):
 
     # if not file:
 
-    if not file:
+    if not pq_path:
         raise HTTPException(status_code=400, detail="No file provided")
 
     # Preprocess the data
@@ -46,20 +47,20 @@ async def predict(file: UploadFile = File(...)):
     # processed_data = load_relevant_data_subset(pq_path)
     # processed_data = load_relevant_data_subset("parquet/path")
 
-    landmarks = await file.read()
-    processed_data = load_relevant_data_subset(landmarks)
+    #landmarks = await file.read()
+    # processed_data = load_relevant_data_subset(pq_path)
 
     # Convert to DF first
-    processed_df = pd.DataFrame(processed_data)
+    processed_df = pd.DataFrame(pq_path, columns = ['file_path'])
     processed_data = group_pad_sequences(processed_df)
-
-
 
 
     # Perform prediction
     prediction = model.predict(np.array([processed_data]))
 
-    return {"prediction": prediction}
+    word = decode_labels(prediction)
+
+    return {"Predicted word": word}
 
 
 @app.get("/")
