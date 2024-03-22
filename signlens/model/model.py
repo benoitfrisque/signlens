@@ -63,8 +63,8 @@ def train_model(
     X: np.ndarray,
     y: np.ndarray,
     batch_size=256,
-    patience=2,
-    epochs=10,
+    patience=10,
+    epochs=100,
     validation_data=None,
     validation_split=0.3,
     verbose=1
@@ -80,7 +80,7 @@ def train_model(
         patience (int, optional): The number of epochs with no improvement after which training will be stopped. Defaults to 2.
         epochs (int, optional): The number of times the learning algorithm will work through the entire training dataset. Defaults to 10.
         validation_data (tuple, optional): Data on which to evaluate the loss and any model metrics at the end of each epoch. Defaults to None.
-        validation_split (float, optional): The fraction of the training data to be used as validation data. Defaults to 0.3.
+        validation_split (float, optional): The fraction of the training data to be used as validation data. Defaults to 0.3. Not used if validation data is provided.
         verbose (int, optional): Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch. Defaults to 1.
 
     Returns:
@@ -115,7 +115,7 @@ def train_model(
         save_freq=(1 * int(X.shape[0] / batch_size)) + 1
     )
     LRreducer = ReduceLROnPlateau(
-        monitor="val_accuracy", factor=0.1, patience=5, verbose=1, min_lr=1e-6)
+        monitor="val_accuracy", factor=0.5, patience=patience-1, verbose=1, min_lr=1e-6)
 
     print(Fore.BLUE + "\nTraining model..." + Style.RESET_ALL)
 
