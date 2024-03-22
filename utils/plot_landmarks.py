@@ -1,11 +1,18 @@
-import numpy as np
+import os
 import math
+import json
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import plotly.express as px
 from ipywidgets import interact, widgets, Output, GridspecLayout
 from IPython.display import HTML
 from IPython import display
+import mediapipe as mp
+import cv2
+#import pyarrow.csv as pv
+#import pyarrow.parquet as pq
 
 # Importing functions for preprocessing and loading data
 from signlens.preprocessing.data import load_relevant_data_subset_per_landmark_type
@@ -379,3 +386,132 @@ def plot_all_landmark_types_3D_from_pq_file(pq_file_path, frame_index, *args, **
     """
     landmarks_dict = load_relevant_data_subset_per_landmark_type(pq_file_path)
     plot_all_landmark_types_3D_from_dict(landmarks_dict, frame_index)
+
+
+################################################################################
+# Extract Landmarks to file and dataframe
+################################################################################
+# TO DO: Dataframe format is packed in columns, need to expand it
+def serialize_landmarks(landmark_list):
+    '''
+    Serialize a list of landmarks into a dictionary format.
+
+    Args:
+        landmark_list (list): A list of landmarks.
+
+    Returns:
+        list: A list of dictionaries, where each dictionary represents a landmark and contains the following keys:
+            - 'x': The x-coordinate of the landmark.
+            - 'y': The y-coordinate of the landmark.
+            - 'z': The z-coordinate of the landmark.
+            - 'visibility': The visibility of the landmark (if available), otherwise np.nan.
+
+    '''
+    if landmark_list is None:
+        return [{'x': np.nan, 'y': np.nan, 'z': np.nan}]
+    landmarks = []
+    for landmark in landmark_list.landmark:
+        landmarks.append({
+            'x': landmark.x,
+            'y': landmark.y,
+            'z': landmark.z
+        })
+    return landmarks
+
+def process_video_to_landmarks(video_path,output=True):
+    '''
+    Takes a video and extracts landmarks.
+    Output to a JSON file in subfolder named json.
+        TO DO: Alternatively output Parquet file.
+
+    Args:
+        - video_path (str): The path to the input video file.
+        - output (str): Write output files to disk (json and parquet).
+
+    Returns:
+        - DataFrame: A DataFrame containing the extracted landmarks.
+    '''
+    # Initialize mediapipe solutions
+    #mp_pose = mp.solutions.pose
+    #mp_hands = mp.solutions.hands
+    frame_number = 0
+    # Open video file
+    cap = cv2.VideoCapture(video_path)
+
+    filename = os.path.splitext(os.path.basename(video_path))[0]
+
+    if output:
+        # Prepare CSV and JSON files
+        json_dir = os.path.join(os.path.dirname(video_path), 'json')  # JSON directory
+        os.makedirs(json_dir, exist_ok=True)  # Create directory if it doesn't exist
+        json_filename = os.path.join(json_dir, f'landmarks_{filename}.json')
+        json_file = open(json_filename, 'w',encoding='UTF8')
+        #parquet_file = open(f'landmarks_{filename}.parquet', 'w')
+
+    json_data = []
+
+    # Initialize mediapipe instances
+    with mp_pose.Pose() as pose, mp_hands.Hands() as hands:
+        while cap.isOpened():
+            success, frame = cap.read()
+            if not success:
+                break
+
+            # Convert the BGR image to RGB
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Process the image and extract landmarks
+            results_pose = pose.process(image)
+            results_hands = hands.process(image)
+
+            # Extract landmarks for pose, left hand, and right hand
+            landmarks_pose = results_pose.pose_landmarks
+
+            if results_hands.multi_hand_landmarks:
+                # Check if there are any hand landmarks detected
+                if len(results_hands.multi_hand_landmarks) == 1:
+                    # Only one hand detected
+                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
+                    landmarks_right_hand = None
+                elif len(results_hands.multi_hand_landmarks) == 2:
+                    # Both hands detected
+                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
+                    landmarks_right_hand = results_hands.multi_hand_landmarks[1]
+            else:
+                # No hands detected
+                landmarks_left_hand = None
+                landmarks_right_hand = None
+
+            serialized_pose = serialize_landmarks(landmarks_pose)
+            serialized_left_hand = serialize_landmarks(landmarks_left_hand)
+            serialized_right_hand = serialize_landmarks(landmarks_right_hand)
+
+            # Write serialized landmarks to JSON
+            json_data.append({
+                'frame_number': frame_number,
+                'pose': serialized_pose,
+                'left_hand': serialized_left_hand,
+                'right_hand': serialized_right_hand
+            })
+
+            frame_number += 1
+
+    # Write JSON data to file
+    json.dump(json_data, json_file, indent=4)
+
+    # Convert JSON data to pandas DataFrame
+    df = pd.json_normalize(json_data)
+
+    # Write DataFrame to parquet file
+    if output:
+        df.to_parquet(f'landmarks_{filename}.parquet')
+
+    # Close files
+    json_file.close()
+
+    # Close video file
+    cap.release()
+
+    # Print a success message
+    print(f"Landmarks have been extracted and saved to JSON file {json_file.name} and parquet file {filename}.parquet.")
+    return df
