@@ -119,7 +119,7 @@ def load_model(model_name_folder=None) -> keras.Model:
 
     print(f"✅ Model loaded from local disk {most_recent_model_path_on_disk}")
 
-    return latest_model,most_recent_model_path_on_disk
+    return latest_model, most_recent_model_path_on_disk
 
 
 def plot_history(history, metric='accuracy', title=None):
