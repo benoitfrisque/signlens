@@ -41,29 +41,25 @@ async def predict(file: UploadFile = File(...)):
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    try:
-        # Preprocess the data
+    # Preprocess the data
 
-        # processed_data = load_relevant_data_subset(pq_path)
-        # processed_data = load_relevant_data_subset("parquet/path")
+    # processed_data = load_relevant_data_subset(pq_path)
+    # processed_data = load_relevant_data_subset("parquet/path")
 
-        processed_data = load_relevant_data_subset(file)
+    landmarks = await file.read()
+    processed_data = load_relevant_data_subset(landmarks)
 
-        # Convert to DF first
-        processed_df = pd.DataFrame(processed_data)
-        processed_data = group_pad_sequences(processed_df)
-
-        print(processed_data.shape)
-        print(processed_data)
+    # Convert to DF first
+    processed_df = pd.DataFrame(processed_data)
+    processed_data = group_pad_sequences(processed_df)
 
 
-        # Perform prediction
-        prediction = model.predict(np.array([processed_data]))
 
-        return {"prediction": prediction}
 
-    except:
-        print('Error')
+    # Perform prediction
+    prediction = model.predict(np.array([processed_data]))
+
+    return {"prediction": prediction}
 
 
 @app.get("/")
