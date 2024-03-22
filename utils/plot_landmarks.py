@@ -418,22 +418,10 @@ def serialize_landmarks(landmark_list):
         })
     return landmarks
 
-def process_video_to_landmarks(video_path,output=True):
-    '''
-    Takes a video and extracts landmarks.
-    Output to a JSON file in subfolder named json.
-        TO DO: Alternatively output Parquet file.
-
-    Args:
-        - video_path (str): The path to the input video file.
-        - output (str): Write output files to disk (json and parquet).
-
-    Returns:
-        - DataFrame: A DataFrame containing the extracted landmarks.
-    '''
+def process_video_to_landmarks(video_path, output=True):
     # Initialize mediapipe solutions
-    #mp_pose = mp.solutions.pose
-    #mp_hands = mp.solutions.hands
+    mp_pose = mp.solutions.pose
+    mp_hands = mp.solutions.hands
     frame_number = 0
     # Open video file
     cap = cv2.VideoCapture(video_path)
@@ -445,8 +433,11 @@ def process_video_to_landmarks(video_path,output=True):
         json_dir = os.path.join(os.path.dirname(video_path), 'json')  # JSON directory
         os.makedirs(json_dir, exist_ok=True)  # Create directory if it doesn't exist
         json_filename = os.path.join(json_dir, f'landmarks_{filename}.json')
-        json_file = open(json_filename, 'w',encoding='UTF8')
-        #parquet_file = open(f'landmarks_{filename}.parquet', 'w')
+        json_file = open(json_filename, 'w', encoding='UTF8')
+
+        parquet_dir = os.path.join(os.path.dirname(video_path), 'parquet')  # Parquet directory
+        os.makedirs(parquet_dir, exist_ok=True)  # Create directory if it doesn't exist
+        parquet_filename = os.path.join(parquet_dir, f'landmarks_{filename}.parquet')
 
     json_data = []
 
@@ -486,6 +477,14 @@ def process_video_to_landmarks(video_path,output=True):
             serialized_left_hand = serialize_landmarks(landmarks_left_hand)
             serialized_right_hand = serialize_landmarks(landmarks_right_hand)
 
+            # Create new index for each landmark type by enumerating
+            for i, landmark in enumerate(serialized_pose):
+                landmark['landmark_index'] = i
+            for i, landmark in enumerate(serialized_left_hand):
+                landmark['landmark_index'] = i
+            for i, landmark in enumerate(serialized_right_hand):
+                landmark['landmark_index'] = i
+
             # Write serialized landmarks to JSON
             json_data.append({
                 'frame_number': frame_number,
@@ -502,9 +501,37 @@ def process_video_to_landmarks(video_path,output=True):
     # Convert JSON data to pandas DataFrame
     df = pd.json_normalize(json_data)
 
+    # Expand the DataFrame format
+    df = df.explode('pose')
+    df = df.explode('left_hand')
+    df = df.explode('right_hand')
+    df = df.reset_index(drop=True)
+
+    # Extract landmark data from the DataFrame
+    landmark_data = df[['pose', 'left_hand', 'right_hand']]
+
+    # Replace NaN values with None
+    landmark_data = landmark_data.applymap(lambda x: x if pd.notna(x) else None)
+
+    # Stack the landmark data into a single column
+    landmark_data = landmark_data.stack().reset_index(level=1, drop=True)
+    landmark_data.name = 'landmark'
+
+    # Extract the landmark type, index, and coordinates
+    df['landmark_type'] = landmark_data.apply(lambda x: x.get('type'))
+    df['landmark_index'] = landmark_data.apply(lambda x: x.get('landmark_index'))
+    df['x'] = landmark_data.apply(lambda x: x.get('x'))
+    df['y'] = landmark_data.apply(lambda x: x.get('y'))
+    df['z'] = landmark_data.apply(lambda x: x.get('z'))
+
+    # Drop the original columns
+    df.drop(['pose', 'left_hand', 'right_hand'], axis=1, inplace=True)
+
+    df.drop(['pose', 'left_hand', 'right_hand'], axis=1, inplace=True)
+
     # Write DataFrame to parquet file
     if output:
-        df.to_parquet(f'landmarks_{filename}.parquet')
+        df.to_parquet(parquet_filename)
 
     # Close files
     json_file.close()
@@ -513,5 +540,5 @@ def process_video_to_landmarks(video_path,output=True):
     cap.release()
 
     # Print a success message
-    print(f"Landmarks have been extracted and saved to JSON file {json_file.name} and parquet file {filename}.parquet.")
+    print(f"Landmarks have been extracted and saved to JSON file {json_filename} and parquet file {parquet_filename}.")
     return df
