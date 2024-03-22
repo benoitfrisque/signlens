@@ -3,9 +3,8 @@ import numpy as np
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from signlens.preprocessing.registry import load_model
 from signlens.preprocessing.preprocess import group_pad_sequences, decode_labels
-from signlens.preprocessing.data import load_relevant_data_subset
+from utils.model_utils import load_model
 
 app = FastAPI()
 
@@ -20,10 +19,12 @@ app.add_middleware(
 
 
 # Load model
-model_name = "model_epoch_08.keras"
-app.state.model = load_model(model_name) # load the model with the above-imported function
+# load the model with the above-imported function
 
+model_name = "model 20240322-173411"
+model = load_model(model_name)
 
+app.state.model = model[0]
 # Takes in parquet path
 
 # @app.post("/predict")
@@ -42,25 +43,13 @@ async def predict(pq_path: str):
     if not pq_path:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    # Preprocess the data
+    processed_data = group_pad_sequences(pd.Series([pq_path]))
 
-    # processed_data = load_relevant_data_subset(pq_path)
-    # processed_data = load_relevant_data_subset("parquet/path")
+    prediction = model.predict([processed_data])
 
-    #landmarks = await file.read()
-    # processed_data = load_relevant_data_subset(pq_path)
+    word, proba = decode_labels(prediction)
 
-    # Convert to DF first
-    processed_df = pd.DataFrame(pq_path, columns = ['file_path'])
-    processed_data = group_pad_sequences(processed_df)
-
-
-    # Perform prediction
-    prediction = model.predict(np.array([processed_data]))
-
-    word = decode_labels(prediction)
-
-    return {"Predicted word": word}
+    return word
 
 
 @app.get("/")
