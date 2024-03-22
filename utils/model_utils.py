@@ -44,7 +44,7 @@ def create_folder_model():
         os.mkdir(subdir_path)
 
     # Create 'model each epoch' as a subdirectory of 'model'
-    model_each_epoch_path = os.path.join(paths['model_path'], 'model each epoch')
+    model_each_epoch_path = os.path.join(paths['model_path'], 'iter')
     paths['model_each_epoch_path'] = model_each_epoch_path
     os.mkdir(model_each_epoch_path)
 
@@ -99,7 +99,7 @@ def load_model(model_name_folder=None) -> keras.Model:
 
     print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
 
-    # Get the latest model version name by the timestamp on disk
+    # Get the latest model version name by the timestamp on the disk
     if model_name_folder is None or model_name_folder=="":
         print(Fore.RED +"Please put the name of the model folder" + Style.RESET_ALL)
         return None
@@ -120,11 +120,6 @@ def load_model(model_name_folder=None) -> keras.Model:
     print(f"✅ Model loaded from local disk {most_recent_model_path_on_disk}")
 
     return latest_model,most_recent_model_path_on_disk
-
-
-
-
-
 
 
 def plot_history(history, metric='accuracy', title=None):
