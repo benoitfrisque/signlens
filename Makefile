@@ -22,10 +22,7 @@ create_virtual_env:
 
 create_output_dir:
 	@mkdir -p training_outputs
-	@mkdir -p training_outputs/metrics
-	@mkdir -p training_outputs/models
-	@mkdir -p training_outputs/params
-	@mkdir -p training_outputs/logs
+
 
 reset_output_dir:
 	@rm -rf training_outputs
