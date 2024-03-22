@@ -26,7 +26,6 @@ LABEL_MAP_PATH          = os.path.join(TRAIN_DATA_DIR,'sign_to_prediction_index_
 GLOSSARY_CSV_PATH       = os.path.join(TRAIN_DATA_DIR, 'glossary.csv')
 
 TRAIN_OUTPUT_DIR        = os.path.join(BASE_DIR, 'training_outputs')
-MODEL_DIR               = os.path.join(TRAIN_OUTPUT_DIR , 'models')
 
 
 N_LANDMARKS_HAND    = 21

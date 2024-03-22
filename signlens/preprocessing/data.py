@@ -74,7 +74,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
             print(f"✅ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.1f}%)")
             size = new_size
         else:
-            # include_classes = train['sign'].unique()
+            include_classes = load_glossary()
             n_classes = len(include_classes)
 
         # Calculate the target number of samples after balancing
