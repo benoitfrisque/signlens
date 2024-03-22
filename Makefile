@@ -42,3 +42,5 @@ run_train:
 
 run_evaluate:
 	python -c 'from signlens.interface.main import evaluate; evaluate()'
+
+run_all: run_train run_evaluate
