@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import Model, Sequential
-from tensorflow.keras.layers import TimeDistributed, LSTM, Dense, Masking, Flatten, Dropout, SimpleRNN, Reshape, Bidirectional
+from tensorflow.keras.layers import TimeDistributed, LSTM, Dense, Masking, Flatten, Dropout, SimpleRNN, Reshape, Bidirectional, Input
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from typing import Tuple
@@ -26,8 +26,7 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_
 
     model = Sequential()
 
-    model.add(Reshape((n_frames, n_landmarks * 3),
-              input_shape=(n_frames, n_landmarks, 3)))
+    model.add(Input(shape=(n_frames, n_landmarks * 3)))
     model.add(Masking(mask_value=0.0))
 
     model.add(SimpleRNN(units=128, return_sequences=True))

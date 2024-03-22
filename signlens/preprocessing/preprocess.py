@@ -74,7 +74,7 @@ def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
         data = [load_and_pad(file_path) for file_path in pq_file_path_df]
 
     # Reshape the data into a 3D array and return it
-    data_reshaped = np.array([item.reshape(n_frames, N_LANDMARKS_NO_FACE, 3) for item in data])
+    data_reshaped = np.array([item.reshape(n_frames, N_LANDMARKS_NO_FACE * 3) for item in data])
     data_tf = tf.convert_to_tensor(data_reshaped)
 
     return data_tf
