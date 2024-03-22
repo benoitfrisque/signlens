@@ -17,16 +17,17 @@ DATA_FRAC = float(os.environ.get("DATA_FRAC"))
 ##################  CONSTANTS  #####################
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__)) # go 2 levels up
+TRAIN_DATA_DIR          = os.path.join(BASE_DIR, 'raw_data', 'asl-signs')
+TRAIN_CSV_PATH          = os.path.join(TRAIN_DATA_DIR, 'train.csv')
+TRAIN_TRAIN_CSV_PATH    = os.path.join(TRAIN_DATA_DIR, 'train_train.csv')
+TRAIN_TEST_CSV_PATH     = os.path.join(TRAIN_DATA_DIR, 'train_test.csv')
+LANDMARK_DIR            = os.path.join(TRAIN_DATA_DIR,'train_landmark_files')
+LABEL_MAP_PATH          = os.path.join(TRAIN_DATA_DIR,'sign_to_prediction_index_map.json')
+GLOSSARY_CSV_PATH       = os.path.join(TRAIN_DATA_DIR, 'glossary.csv')
 
-TRAIN_DATA_DIR   = os.path.join(BASE_DIR, 'raw_data', 'asl-signs')
-TRAIN_CSV_PATH   = os.path.join(TRAIN_DATA_DIR, 'train.csv')
-LANDMARK_DIR     = os.path.join(TRAIN_DATA_DIR,'train_landmark_files')
-LABEL_MAP_PATH   = os.path.join(TRAIN_DATA_DIR,'sign_to_prediction_index_map.json')
+TRAIN_OUTPUT_DIR        = os.path.join(BASE_DIR, 'training_outputs')
+MODEL_DIR               = os.path.join(TRAIN_OUTPUT_DIR , 'models')
 
-GLOSSARY_CSV_PATH = os.path.join(TRAIN_DATA_DIR, 'glossary.csv')
-
-
-MODEL_DIR        = os.path.join(BASE_DIR, 'training_outputs', 'models')
 
 N_LANDMARKS_HAND    = 21
 N_LANDMAKRS_POSE    = 33

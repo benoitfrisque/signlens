@@ -2,12 +2,70 @@ import os
 import matplotlib.pyplot as plt
 from ipywidgets import interact, FloatSlider
 from IPython.display import display
-
+from colorama import Fore, Style
+from tensorflow import keras
 from signlens.params import *
+import glob
+import time
+import pickle
 
 def save_model(model):
-    model_path = os.path.join(BASE_DIR, 'results', 'models', 'model.h5')
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    model_path = os.path.join(MODEL_DIR, f"{timestamp}.h5")
     model.save(model_path)
+
+def save_results(params: dict, metrics: dict) -> None:
+    """
+    Persist params & metrics locally on the hard drive at
+    "{LOCAL_REGISTRY_PATH}/params/{current_timestamp}.pickle"
+    "{LOCAL_REGISTRY_PATH}/metrics/{current_timestamp}.pickle"
+    - (unit 03 only) if MODEL_TARGET='mlflow', also persist them on MLflow
+    """
+
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+
+    # Save params locally
+    if params is not None:
+        params_path = os.path.join(TRAIN_OUTPUT_DIR, "params", timestamp + ".pickle")
+        with open(params_path, "wb") as file:
+            pickle.dump(params, file)
+
+    # Save metrics locally
+    if metrics is not None:
+        metrics_path = os.path.join(TRAIN_OUTPUT_DIR, "metrics", timestamp + ".pickle")
+        with open(metrics_path, "wb") as file:
+            pickle.dump(metrics, file)
+
+    print("✅ Results saved locally")
+
+
+def load_model() -> keras.Model:
+    """
+    Return a saved model:
+    - locally (latest one in alphabetical order)
+
+    Return None (but do not Raise) if no model is found
+
+    """
+
+    print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
+
+    # Get the latest model version name by the timestamp on disk
+    local_model_paths = glob.glob(f"{MODEL_DIR}/*.h5")
+
+    if not local_model_paths:
+        return None
+
+    most_recent_model_path_on_disk = sorted(local_model_paths)[-1]
+
+    print(Fore.BLUE + f"\nLoad latest model from disk..." + Style.RESET_ALL)
+
+    latest_model = keras.models.load_model(most_recent_model_path_on_disk)
+
+    print(f"✅ Model loaded from local disk {most_recent_model_path_on_disk}")
+
+    return latest_model
+
 
 def plot_history(history, metric='accuracy', title=None):
     """
