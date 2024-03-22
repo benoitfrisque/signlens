@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import multiprocessing as mp
+import tensorflow as tf
 from colorama import Fore, Style
 from sklearn.preprocessing import OneHotEncoder
 from scipy.sparse import csr_matrix
@@ -47,13 +48,17 @@ def load_and_pad(pq_file_path):
 def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
     """
     Load data from multiple files, pad the sequences, and group them into a single array.
+    If an error occurs during multiprocessing, falls back to sequential processing.
 
     Parameters:
     - pq_file_path_df (pandas.DataFrame): DataFrame containing file paths.
     - n_frames (int, optional): Number of frames. Defaults to MAX_SEQ_LEN.
 
     Returns:
-    - numpy.ndarray: 3D array of grouped and padded sequences.
+    - tf.Tensor: 3D tensor of grouped and padded sequences.
+
+    Raises:
+    - Exception: If an error occurs during the loading or padding process.
     """
 
     try:
@@ -69,8 +74,10 @@ def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
         data = [load_and_pad(file_path) for file_path in pq_file_path_df]
 
     # Reshape the data into a 3D array and return it
-    return np.array([item.reshape(n_frames, N_LANDMARKS_NO_FACE, 3) for item in data])
-    #return tf.convert_to_tensor([item.reshape(100, 75, 3) for item in new_data])
+    data_reshaped = np.array([item.reshape(n_frames, N_LANDMARKS_NO_FACE, 3) for item in data])
+    data_tf = tf.convert_to_tensor(data_reshaped)
+
+    return data_tf
 
 
 def label_dictionnary(df):
