@@ -48,11 +48,9 @@ def load_model() -> keras.Model:
 
     """
 
-
     print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
 
     # Get the latest model version name by the timestamp on disk
-    local_model_directory = os.path.join(MODEL_DIR)
     local_model_paths = glob.glob(f"{MODEL_DIR}/*.h5")
 
     if not local_model_paths:
@@ -67,11 +65,6 @@ def load_model() -> keras.Model:
     print(f"✅ Model loaded from local disk {most_recent_model_path_on_disk}")
 
     return latest_model
-
-
-
-
-
 
 
 def plot_history(history, metric='accuracy', title=None):
