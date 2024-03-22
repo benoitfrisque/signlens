@@ -6,14 +6,17 @@ from sklearn.model_selection import train_test_split
 from utils.model_utils import *
 from colorama import Fore, Style
 
+
 def preprocess():
     unique_train_test_split()
-    train=load_data_subset_csv(balanced=True)
-    y=label_dictionnary(train)
-    X_train, X_val, y_train, y_val = train_test_split(train.file_path, y, test_size=0.2, random_state=42, stratify=y)
-    X_train=group_pad_sequences(X_train)
-    X_val=group_pad_sequences(X_val)
-    return X_train,X_val,y_train,y_val
+    train = load_data_subset_csv(balanced=True)
+    y = label_dictionnary(train)
+    X_train, X_val, y_train, y_val = train_test_split(
+        train.file_path, y, test_size=0.2, random_state=42, stratify=y)
+    X_train = group_pad_sequences(X_train)
+    X_val = group_pad_sequences(X_val)
+    return X_train, X_val, y_train, y_val
+
 
 def train(name_model=None):
 

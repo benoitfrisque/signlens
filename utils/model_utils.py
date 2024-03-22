@@ -97,7 +97,6 @@ def load_model(model_name_folder=None) -> keras.Model:
 
     """
 
-
     print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
 
     # Get the latest model version name by the timestamp on disk
