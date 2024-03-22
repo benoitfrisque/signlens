@@ -1,13 +1,12 @@
-import pandas as pd
+from json import load
 import numpy as np
 import multiprocessing as mp
 import tensorflow as tf
 from colorama import Fore, Style
-from sklearn.preprocessing import OneHotEncoder
-from scipy.sparse import csr_matrix
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 from signlens.params import *
-from signlens.preprocessing.data import load_relevant_data_subset
+from signlens.preprocessing.data import load_relevant_data_subset, load_glossary
 
 def pad_sequences(sequence, n_frames=MAX_SEQ_LEN):
     '''
@@ -79,20 +78,57 @@ def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
 
     return data_tf
 
+from sklearn.preprocessing import LabelEncoder
 
-def label_dictionnary(df):
+
+def encode_labels(y):
     """
-    Encode the 'sign' column in the DataFrame using a label map dictionary.
+    Encode the labels in y based on a provided glossary using TensorFlow's to_categorical.
 
     Parameters:
-    - df (pandas.DataFrame): DataFrame containing the 'sign' column to be encoded.
-    Returns:
-    - numpy.ndarray: One-hot encoded representations of the 'sign' column.
+    - y (pandas.Series): Series containing labels to be encoded.
 
-    This function loads converts the encoded values to one-hot encoded vectors using OnehotEncoder
-    from sklearn.
+    Returns:
+    - numpy.ndarray: Encoded representations of the labels.
     """
-    encoder = OneHotEncoder()
-    encoded_data = encoder.fit_transform(df[['sign']])
-    y_encoded = encoded_data.toarray()
-    return y_encoded
+    glossary = load_glossary()
+
+    # Extract labels from the glossary
+    labels = glossary['sign'].tolist()
+
+    # Get unique labels and their indices
+    label_indices = {label: index for index, label in enumerate(labels)}
+
+    # Encode the labels
+    encoded_labels = y.map(label_indices)
+
+    # Convert labels to one-hot encoding using TensorFlow's to_categorical
+    encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=NUM_CLASSES)
+
+    return encoded_labels
+
+def decode_labels(y_encoded):
+    """
+    Decode encoded labels based on the provided glossary.
+
+    Parameters:
+    - y_encoded (numpy.ndarray): Encoded representations of the labels.
+
+    Returns:
+    - pandas.Series: Decoded labels.
+    """
+
+    glossary = load_glossary()
+
+    # Extract labels from the glossary
+    labels = glossary['sign'].tolist()
+
+    # Get the index with maximum value for each row in y_encoded
+    decoded_indices = np.argmax(y_encoded, axis=1)
+
+    # Map indices back to labels
+    decoded_labels = [labels[idx] for idx in decoded_indices]
+
+    predict_proba = np.max(y_encoded, axis=1)
+
+    return decoded_labels, predict_proba

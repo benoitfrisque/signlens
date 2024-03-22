@@ -1,16 +1,16 @@
-from signlens.model.model import *
-from signlens.params import *
-from signlens.preprocessing.data import *
-from signlens.preprocessing.preprocess import *
 from sklearn.model_selection import train_test_split
 from utils.model_utils import *
 from colorama import Fore, Style
 
+from signlens.params import *
+from signlens.preprocessing.data import *
+from signlens.preprocessing.preprocess import  *
+from signlens.model.model import *
 
 def preprocess():
     unique_train_test_split()
     train = load_data_subset_csv(balanced=True)
-    y = label_dictionnary(train)
+    y = encode_labels(train.sign)
     X_train, X_val, y_train, y_val = train_test_split(
         train.file_path, y, test_size=0.2, random_state=42, stratify=y)
     X_train = group_pad_sequences(X_train)
@@ -26,7 +26,8 @@ def train(name_model=None):
         Fore.RED+"Enter the name of the model you want to load (if you want to reset the model press enter):"+Style.RESET_ALL)
     model = load_model(name_model)
     if model is None:
-        model = initialize_model(num_classes=y_train.shape[1])
+        import ipdb; ipdb.set_trace()
+        model = initialize_model(num_classes=NUM_CLASSES)
     model = compile_model(model)
     model, history = train_model(model, X_train, y_train, patience=10, epochs=10, verbose=1, batch_size=32, validation_data=[
                                  X_val, y_val], model_save_epoch_path=paths["model_each_epoch_path"])
@@ -49,7 +50,7 @@ def evaluate(name_model=None):
     name_model = input(
         Fore.RED+"Enter the name of the model you want to load:"+Style.RESET_ALL)
     test = load_data_subset_csv(balanced=True, csv_path=TRAIN_TEST_CSV_PATH)
-    y_test = label_dictionnary(test)
+    y_test = encode_labels(test.sign)
     X_test = group_pad_sequences(test.file_path)
     model, path = load_model(name_model)
     assert model is not None
