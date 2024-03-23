@@ -77,8 +77,9 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
     # Balance the data if requested
     if balanced:
-        train_balanced, size = balance_data(
-            train, n_classes, frac, random_state, size)
+        train_balanced, size = balance_data(train, n_classes, frac, random_state, size)
+        train_balanced = train_balanced.sample(frac=1, random_state=random_state) # shuffle
+
         if n_classes is None:
             n_classes = len(train_balanced.sign.unique())
 
@@ -317,11 +318,15 @@ def unique_train_test_split(force_rewrite=False):
     if not force_rewrite and os.path.exists(TRAIN_TRAIN_CSV_PATH) and os.path.exists(TRAIN_TEST_CSV_PATH):
         return print(Fore.BLUE + "Train and test data already exist." + Style.RESET_ALL)
 
+    if force_rewrite:
+        print(Fore.RED + "Force rewrite is enabled. Overwriting the existing train and test data." + Style.RESET_ALL)
+
     test_size = 0.2
 
     print(Fore.BLUE + Style.BRIGHT +
           f"\nCreating unique test set with test_size = {test_size}" + Style.RESET_ALL)
 
+    # Unique test set defined with constant random_state and parameters independent of the environment
     test_data = load_data_subset_csv(frac=test_size, noface=False, balanced=True,
                                      n_classes=250, n_frames=100, random_state=42, csv_path=TRAIN_CSV_PATH)
 
