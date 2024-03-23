@@ -164,28 +164,50 @@ def process_video_to_landmarks(video_path, output=True):
     return df
 
 
-def process_video_to_landmarks_json(video_path, output=True):
+def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, frame_limit=None):
+    """
+    Process a video file and extract landmarks from each frame, then save the landmarks as JSON.
+
+    Args:
+        video_path (str): The path to the video file.
+        output (bool, optional): Whether to save the landmarks as JSON. Defaults to True.
+        frame_interval (int, optional): The interval between processed frames. Defaults to 1.
+        frame_limit (int, optional): The maximum number of frames to process. Defaults to None.
+
+    Returns:
+        list: A list of dictionaries containing the extracted landmarks for each frame.
+
+    Raises:
+        FileNotFoundError: If the video file specified by `video_path` does not exist.
+
+    Example:
+        video_path = '/path/to/video.mp4'
+        landmarks = process_video_to_landmarks_json(video_path, output=True, frame_interval=2, frame_limit=100)
+        print(landmarks)
+    """
+
     # Initialize mediapipe solutions
     mp_pose = mp.solutions.pose
     mp_hands = mp.solutions.hands
-    frame_number = 0
+
     # Open video file
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video file '{video_path}' not found.")
+
     cap = cv2.VideoCapture(video_path)
 
-    filename = os.path.splitext(os.path.basename(video_path))[0]
-
     if output:
-        # Prepare CSV and JSON files
+        # Prepare JSON file
+        filename = os.path.splitext(os.path.basename(video_path))[0]
+
         json_dir = os.path.join(os.path.dirname(video_path), 'json')  # JSON directory
         os.makedirs(json_dir, exist_ok=True)  # Create directory if it doesn't exist
         json_filename = os.path.join(json_dir, f'landmarks_{filename}.json')
         json_file = open(json_filename, 'w', encoding='UTF8')
 
-        parquet_dir = os.path.join(os.path.dirname(video_path), 'parquet')  # Parquet directory
-        os.makedirs(parquet_dir, exist_ok=True)  # Create directory if it doesn't exist
-        parquet_filename = os.path.join(parquet_dir, f'landmarks_{filename}.parquet')
-
     json_data = []
+    frame_number = 0
+    processed_frames = 0
 
     # Initialize mediapipe instances
     with mp_pose.Pose() as pose, mp_hands.Hands() as hands:
@@ -193,6 +215,11 @@ def process_video_to_landmarks_json(video_path, output=True):
             success, frame = cap.read()
             if not success:
                 break
+
+            # Skip frames based on frame_interval
+            if frame_number % frame_interval != 0:
+                frame_number += 1
+                continue
 
             # Convert the BGR image to RGB
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -240,13 +267,19 @@ def process_video_to_landmarks_json(video_path, output=True):
             })
 
             frame_number += 1
+            processed_frames += 1
 
+            # Stop processing if frame_limit is reached
+            if frame_limit is not None and processed_frames >= frame_limit:
+                break
 
     # Close video file
     cap.release()
 
-    # Write JSON data to file
-    json.dump(json_data, json_file, indent=4)
+    if output:
+         # Write JSON data to file
+        json.dump(json_data, json_file, indent=4)
+        # Close files
+        json_file.close()
 
-    # Close files
-    json_file.close()
+    return json_data
