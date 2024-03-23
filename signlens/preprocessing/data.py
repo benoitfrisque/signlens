@@ -89,7 +89,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         print(
             f"    ℹ️ Balanced data, with average of {size_per_class:.1f} elements per class. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
         size = new_size
-        total_size_ratio = new_size / total_size
+        total_size_ratio = size / total_size
         print(
             f"✅ Loaded {size} rows ({total_size_ratio *100:.2f}% of the original {total_size} rows) from the dataset.")
         return train_balanced.reset_index(drop=True)
@@ -104,8 +104,8 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         print(
             f"    ℹ️ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
 
-        total_size_ratio = size / total_size
         size = new_size
+        total_size_ratio = size / total_size
         print(
             f"✅ Loaded {size} rows ({total_size_ratio *100:.2f}% of the original {total_size} rows) from the dataset.")
 
@@ -116,8 +116,8 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         train = train.sample(frac=frac, random_state=random_state)
 
         new_size = len(train)
-        total_size_ratio = size / total_size
         size = new_size
+        total_size_ratio = size / total_size
 
         print(
             f"✅ Loaded {size} rows ({total_size_ratio *100:.2f}% of the original {total_size} rows) from the dataset.")
