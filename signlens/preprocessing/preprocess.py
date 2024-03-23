@@ -78,7 +78,7 @@ def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
     return data_tf
 
 
-def encode_labels(y):
+def encode_labels(y, num_classes=NUM_CLASSES):
     """
     Encode the labels in y based on a provided glossary using TensorFlow's to_categorical.
 
@@ -100,7 +100,7 @@ def encode_labels(y):
     encoded_labels = y.map(label_indices)
 
     # Convert labels to one-hot encoding using TensorFlow's to_categorical
-    encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=NUM_CLASSES)
+    encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=num_classes)
 
     return encoded_labels
 
