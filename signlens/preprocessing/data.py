@@ -47,11 +47,21 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         train[['path']] = train[['path']].apply(lambda x: x.str.replace(
             'train_landmark_files', 'train_landmark_files_noface'))
 
+    # Add file_path column with absolute path
     train['file_path'] = TRAIN_DATA_DIR + os.path.sep + train['path']
-    if 'n_frames' not in train.columns or 'n_frames2' not in train.columns:
-        train = load_frame_number_parquet(train, csv_path=TRAIN_CSV_PATH) # Add n_frames column
 
-    train = filter_sequences_with_missing_frames(train) # Filter out sequences with missing frames
+    # Add n_frames column
+    if 'n_frames' not in train.columns or 'n_frames2' not in train.columns:
+        train = load_frame_number_parquet(train, csv_path=TRAIN_CSV_PATH)
+
+
+    # Filter out sequences with missing frames
+    train = filter_sequences_with_missing_frames(train)
+
+    new_size = len(train)
+    size_ratio = new_size / size
+    print(f"✅ Filtered sequences with missing frames. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
+    size = new_size
 
     # Filter out parquet files with more than n_frames
     if n_frames is not None:
