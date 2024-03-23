@@ -58,7 +58,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         train = filter_out_parquet_frame(train, n_frames=n_frames)
         new_size = len(train)
         size_ratio = new_size / size
-        print(f"✅ Filtered on n_frames = {n_frames}. Size reduced from {size} to {new_size} ({size_ratio*100:.1f}%)")
+        print(f"✅ Filtered on n_frames = {n_frames}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
         size = new_size
 
     # Balance the data if requested
@@ -71,7 +71,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
             train = train[train['sign'].isin(include_classes)]
             new_size = len(train)
             size_ratio = new_size / size
-            print(f"✅ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.1f}%)")
+            print(f"✅ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
             size = new_size
         else:
             include_classes = load_glossary()
@@ -111,10 +111,10 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
         new_size = len(train_balanced)
         size_ratio = new_size / size
-        print(f"✅ Balanced data, with average of {size_per_class} elements per class. Size reduced from {size} to {new_size} ({size_ratio*100:.1f}%)")
+        print(f"✅ Balanced data, with average of {size_per_class} elements per class. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
 
         total_size_ratio = new_size / total_size
-        print(f"✅ Loaded {size} rows ({total_size_ratio *100:.1f}% of the original {total_size} rows) from the dataset.")
+        print(f"✅ Loaded {size} rows ({total_size_ratio *100:.2f}% of the original {total_size} rows) from the dataset.")
         return train_balanced.sample(frac=1, random_state=random_state).reset_index(drop=True) # resample to shuffle
 
     # Case if not balanced but n_classes is specified
@@ -125,11 +125,11 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
         new_size = len(train)
         size_ratio = new_size / size
-        print(f"✅ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.1f}%)")
+        print(f"✅ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
 
         size = new_size
         total_size_ratio = size / total_size
-        print(f"✅ Loaded {size} rows ({total_size_ratio *100:.1f}% of the original {total_size} rows) from the dataset.")
+        print(f"✅ Loaded {size} rows ({total_size_ratio *100:.2f}% of the original {total_size} rows) from the dataset.")
 
         return train.reset_index(drop=True)
 
@@ -139,7 +139,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
         new_size = len(train)
         size_ratio = new_size / size
-        print(f"✅ Loaded {size} rows ({total_size_ratio *100:.1f}% of the original {total_size} rows) from the dataset.")
+        print(f"✅ Loaded {size} rows ({total_size_ratio *100:.2f}% of the original {total_size} rows) from the dataset.")
 
         return train.reset_index(drop=True)
 
@@ -162,8 +162,8 @@ def unique_train_test_split():
     train_ratio = train_len / total_len
 
     print(Fore.BLUE + f"\nTotal loaded rows : {total_len} \
-        \nTotal training rows : {train_len} ({train_ratio*100:.1f}%) \
-        \nTotal test rows : {test_len} ({test_ratio*100:.1f}%)" + Style.RESET_ALL)
+        \nTotal training rows : {train_len} ({train_ratio*100:.2f}%) \
+        \nTotal test rows : {test_len} ({test_ratio*100:.2f}%)" + Style.RESET_ALL)
 
     train_data.drop(columns=['file_path']).to_csv(TRAIN_TRAIN_CSV_PATH, index=False)
     test_data.drop(columns=['file_path']).to_csv(TRAIN_TEST_CSV_PATH, index=False)
