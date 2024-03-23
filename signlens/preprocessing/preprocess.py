@@ -3,7 +3,6 @@ import numpy as np
 import multiprocessing as mp
 import tensorflow as tf
 from colorama import Fore, Style
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 from signlens.params import *
 from signlens.preprocessing.data import load_relevant_data_subset, load_glossary
@@ -77,8 +76,6 @@ def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
     data_tf = tf.convert_to_tensor(data_reshaped)
 
     return data_tf
-
-from sklearn.preprocessing import LabelEncoder
 
 
 def encode_labels(y):
