@@ -4,16 +4,17 @@ import numpy as np
 import pandas as pd
 import mediapipe as mp
 import cv2
+import math
+from google.protobuf.json_format import MessageToDict
+from mediapipe.framework.formats import landmark_pb2
 
-#import pyarrow.csv as pv
-#import pyarrow.parquet as pq
+from signlens.params import N_LANDMARKS_HAND, N_LANDMARKS_POSE
 
-################################################################################
-# Extract Landmarks to file and dataframe
-################################################################################
-# TO DO: Dataframe format is packed in columns, need to expand it
+
+import math
+
 def serialize_landmarks(landmark_list):
-    '''
+    """
     Serialize a list of landmarks into a dictionary format.
 
     Args:
@@ -21,20 +22,18 @@ def serialize_landmarks(landmark_list):
 
     Returns:
         list: A list of dictionaries, where each dictionary represents a landmark and contains the following keys:
-            - 'x': The x-coordinate of the landmark.
-            - 'y': The y-coordinate of the landmark.
-            - 'z': The z-coordinate of the landmark.
-            - 'visibility': The visibility of the landmark (if available), otherwise np.nan.
-
-    '''
-    if landmark_list is None:
-        return [{'x': None, 'y': None, 'z': None}]
+            - 'landmark_index': The index of the landmark in the list.
+            - 'x': The x-coordinate of the landmark. If the value is NaN, it is set to None.
+            - 'y': The y-coordinate of the landmark. If the value is NaN, it is set to None.
+            - 'z': The z-coordinate of the landmark. If the value is NaN, it is set to None.
+    """
     landmarks = []
-    for landmark in landmark_list.landmark:
+    for idx, landmark in enumerate(landmark_list.landmark):
         landmarks.append({
-            'x': landmark.x,
-            'y': landmark.y,
-            'z': landmark.z
+            'landmark_index': idx,
+            'x': None if math.isnan(landmark.x) else landmark.x,
+            'y': None if math.isnan(landmark.y) else landmark.y,
+            'z': None if math.isnan(landmark.z) else landmark.z
         })
     return landmarks
 
@@ -50,18 +49,24 @@ def process_video_to_landmarks(video_path, output=True):
 
     if output:
         # Prepare CSV and JSON files
-        json_dir = os.path.join(os.path.dirname(video_path), 'json')  # JSON directory
-        os.makedirs(json_dir, exist_ok=True)  # Create directory if it doesn't exist
+        json_dir = os.path.join(os.path.dirname(
+            video_path), 'json')  # JSON directory
+        # Create directory if it doesn't exist
+        os.makedirs(json_dir, exist_ok=True)
         json_filename = os.path.join(json_dir, f'landmarks_{filename}.json')
         json_file = open(json_filename, 'w', encoding='UTF8')
 
-        parquet_dir = os.path.join(os.path.dirname(video_path), 'parquet')  # Parquet directory
-        os.makedirs(parquet_dir, exist_ok=True)  # Create directory if it doesn't exist
-        parquet_filename = os.path.join(parquet_dir, f'landmarks_{filename}.parquet')
+        parquet_dir = os.path.join(os.path.dirname(
+            video_path), 'parquet')  # Parquet directory
+        # Create directory if it doesn't exist
+        os.makedirs(parquet_dir, exist_ok=True)
+        parquet_filename = os.path.join(
+            parquet_dir, f'landmarks_{filename}.parquet')
 
     json_data = []
 
     # Initialize mediapipe instances
+
     with mp_pose.Pose() as pose, mp_hands.Hands() as hands:
         while cap.isOpened():
             success, frame = cap.read()
@@ -131,7 +136,8 @@ def process_video_to_landmarks(video_path, output=True):
     landmark_data = df[['pose', 'left_hand', 'right_hand']]
 
     # Replace NaN values with None
-    landmark_data = landmark_data.applymap(lambda x: x if pd.notna(x) else None)
+    landmark_data = landmark_data.applymap(
+        lambda x: x if pd.notna(x) else None)
 
     # Stack the landmark data into a single column
     landmark_data = landmark_data.stack().reset_index(level=1, drop=True)
@@ -139,7 +145,8 @@ def process_video_to_landmarks(video_path, output=True):
 
     # Extract the landmark type, index, and coordinates
     df['landmark_type'] = landmark_data.apply(lambda x: x.get('type'))
-    df['landmark_index'] = landmark_data.apply(lambda x: x.get('landmark_index'))
+    df['landmark_index'] = landmark_data.apply(
+        lambda x: x.get('landmark_index'))
     df['x'] = landmark_data.apply(lambda x: x.get('x'))
     df['y'] = landmark_data.apply(lambda x: x.get('y'))
     df['z'] = landmark_data.apply(lambda x: x.get('z'))
@@ -160,11 +167,12 @@ def process_video_to_landmarks(video_path, output=True):
     cap.release()
 
     # Print a success message
-    print(f"Landmarks have been extracted and saved to JSON file {json_filename} and parquet file {parquet_filename}.")
+    print(
+        f"Landmarks have been extracted and saved to JSON file {json_filename} and parquet file {parquet_filename}.")
     return df
 
 
-def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, frame_limit=None):
+def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, frame_limit=None, rear_camera=True):
     """
     Process a video file and extract landmarks from each frame, then save the landmarks as JSON.
 
@@ -200,8 +208,10 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
         # Prepare JSON file
         filename = os.path.splitext(os.path.basename(video_path))[0]
 
-        json_dir = os.path.join(os.path.dirname(video_path), 'json')  # JSON directory
-        os.makedirs(json_dir, exist_ok=True)  # Create directory if it doesn't exist
+        json_dir = os.path.join(os.path.dirname(
+            video_path), 'json')  # JSON directory
+        # Create directory if it doesn't exist
+        os.makedirs(json_dir, exist_ok=True)
         json_filename = os.path.join(json_dir, f'landmarks_{filename}.json')
         json_file = open(json_filename, 'w', encoding='UTF8')
 
@@ -209,8 +219,13 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
     frame_number = 0
     processed_frames = 0
 
+    # Initialize an empty NormalizedLandmarkList for hand and pose
+    empty_hand_landmark_list = create_empty_landmark_list(N_LANDMARKS_HAND)
+    empty_pose_landmark_list = create_empty_landmark_list(N_LANDMARKS_POSE)
+
     # Initialize mediapipe instances
-    with mp_pose.Pose() as pose, mp_hands.Hands() as hands:
+    with mp_pose.Pose(static_image_mode=False) as pose, \
+            mp_hands.Hands(static_image_mode=False, max_num_hands=2) as hands:
         while cap.isOpened():
             success, frame = cap.read()
             if not success:
@@ -220,6 +235,11 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
             if frame_number % frame_interval != 0:
                 frame_number += 1
                 continue
+
+            # by default, mediapipe assumes the input image is mirrored, i.e., taken with a front-facing/selfie camera with images flipped horizontally
+            # if you want to process images taken with a webcam/selfie, you can set rear_camera = False
+            if rear_camera:
+                image = cv2.flip(frame, 1)  # flip around y-axis
 
             # Convert the BGR image to RGB
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -231,32 +251,30 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
             # Extract landmarks for pose, left hand, and right hand
             landmarks_pose = results_pose.pose_landmarks
 
+            # Check if there are any pose landmarks detected
+            if landmarks_pose is None:
+                landmarks_pose = empty_pose_landmark_list
+
+            # Initialize empty hand landmarkks, then overwrite if it finds it
+            landmarks_left_hand = empty_hand_landmark_list
+            landmarks_right_hand = empty_hand_landmark_list
+
+            # Check if there are any hand landmarks detected
             if results_hands.multi_hand_landmarks:
-                # Check if there are any hand landmarks detected
-                if len(results_hands.multi_hand_landmarks) == 1:
-                    # Only one hand detected
-                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
-                    landmarks_right_hand = None
-                elif len(results_hands.multi_hand_landmarks) == 2:
-                    # Both hands detected
-                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
-                    landmarks_right_hand = results_hands.multi_hand_landmarks[1]
-            else:
-                # No hands detected
-                landmarks_left_hand = None
-                landmarks_right_hand = None
+                # Get handedness of each hand
+                for idx, hand_handedness in enumerate(results_hands.multi_handedness):
+                    handedness_dict = MessageToDict(hand_handedness)
+                    hand_side = handedness_dict['classification'][0]['label'].lower(
+                    )
+
+                    if hand_side == 'left':
+                        landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
+                    elif hand_side == 'right':
+                        landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
 
             serialized_pose = serialize_landmarks(landmarks_pose)
             serialized_left_hand = serialize_landmarks(landmarks_left_hand)
             serialized_right_hand = serialize_landmarks(landmarks_right_hand)
-
-            # Create new index for each landmark type by enumerating
-            for i, landmark in enumerate(serialized_pose):
-                landmark['landmark_index'] = i
-            for i, landmark in enumerate(serialized_left_hand):
-                landmark['landmark_index'] = i
-            for i, landmark in enumerate(serialized_right_hand):
-                landmark['landmark_index'] = i
 
             # Write serialized landmarks to JSON
             json_data.append({
@@ -277,9 +295,33 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
     cap.release()
 
     if output:
-         # Write JSON data to file
+        # Write JSON data to file
         json.dump(json_data, json_file, indent=4)
         # Close files
         json_file.close()
 
     return json_data
+
+
+def create_empty_landmark_list(n_landmarks):
+    """
+    Create an empty NormalizedLandmarkList.
+
+    Args:
+        n_landmarks (int): The number of landmarks to create.
+
+    Returns:
+        landmark_pb2.NormalizedLandmarkList: An empty NormalizedLandmarkList.
+
+    """
+    # Initialize an empty NormalizedLandmarkList for hand
+    empty_landmark_list = landmark_pb2.NormalizedLandmarkList()
+
+    # Add empty landmarks to the list
+    for _ in range(n_landmarks):
+        landmark = empty_landmark_list.landmark.add()
+        landmark.x = np.nan  # We use nan and not None because it doesn't work with None
+        landmark.y = np.nan
+        landmark.z = np.nan
+
+    return empty_landmark_list
