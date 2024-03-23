@@ -452,3 +452,55 @@ def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_colum
         filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
 
     return filtered_landmarks
+
+
+################################################################################
+# LOAD VIDEOS
+################################################################################
+
+def load_video_list_json(video_list_json_path=WLASL_JSON_PATH, filter_glossary=True):
+    """
+    Reads the list of video paths from the specified file.
+
+    Args:
+        video_list_path (str): Path to the file containing the list of video paths.
+
+    Returns:
+        list: A list of video paths.
+    """
+    df = pd.read_json(video_list_json_path)
+
+    # Explode the 'instances' column
+    df_unstacked = df.explode('instances').reset_index(drop=True)
+
+    # Normalize the 'instances' column containing dictionaries
+    instances_df = pd.json_normalize(df_unstacked['instances'])
+
+    # Combine the normalized 'instances' DataFrame with the original DataFrame
+    videos_df = pd.concat([df_unstacked.drop(columns=['instances']), instances_df], axis=1)
+
+    videos_df['video_path'] = videos_df['video_id'].apply(lambda row : concat_video_path(WLASL_VIDEO_DIR, row, 'mp4'))
+
+    videos_df['file_exists'] = videos_df['video_path'].apply(lambda row : os.path.isfile(row))
+
+    videos_df = videos_df [videos_df['file_exists']] # filter out videos that do not exist
+
+    videos_df = videos_df.rename(columns={'gloss': 'sign'})
+
+    videos_df = videos_df.drop(columns=['file_exists'])
+
+    if filter_glossary:
+        glossary = load_glossary()
+        videos_df = videos_df[videos_df['sign'].isin(glossary['sign'])]
+
+    videos_df = videos_df.sample(frac=1, random_state=42) # shuffle to avoid having them grouped by sign
+
+    videos_df = videos_df.reset_index(drop=True)
+
+    return videos_df
+
+
+def concat_video_path(path, video_id, video_format='mp4'):
+    filename = f'{video_id}.{video_format}'
+    video_path = os.path.join(path, filename)
+    return video_path
