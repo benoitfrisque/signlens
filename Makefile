@@ -11,7 +11,7 @@ install_requirements_dev:
 	@if [ $$(uname) = "Darwin" ]; then \
 				brew install ffmpeg; \
     else \
-        @sudo apt-get install ffmpeg; \
+        sudo apt-get install ffmpeg; \
     fi
 	@make -s install_signlens_dev
 
@@ -41,3 +41,6 @@ run_evaluate:
 	python -c 'from signlens.interface.main import evaluate; evaluate()'
 
 run_all: run_train run_evaluate
+
+run_api:
+	uvicorn signlens.api.fast:app --reload
