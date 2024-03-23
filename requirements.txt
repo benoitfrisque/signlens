@@ -1,19 +1,17 @@
-numpy
-pandas
-matplotlib
-seaborn
-scikit-learn
-# Trick to install the version of Tensorflow depending on your processor: darwin == Mac, ARM == M1
-tensorflow-macos; sys_platform == 'darwin' and 'ARM' in platform_version # Mac M-chips
-tensorflow; sys_platform == 'darwin' and 'ARM' not in platform_version # Mac Intel chips
-tflite-runtime; sys_platform != 'darwin' # Windows & Ubuntu Intel chips
-opencv-python
-mediapipe
-pyarrow
-fastparquet
 colorama
-typing
-tqdm
 direnv
+fastparquet
+matplotlib
+mediapipe
+numpy
+opencv-python
+pandas
+pyarrow
+scikit-learn
 scipy
-streamlit
+seaborn
+tensorflow; sys_platform == 'darwin' and 'ARM' not in platform_version # Mac Intel chips
+tensorflow; sys_platform == 'win32' or 'linux' in sys_platform # Windows and Linux
+tensorflow-macos; sys_platform == 'darwin' and 'ARM' in platform_version # Mac M-chips
+tqdm
+typing

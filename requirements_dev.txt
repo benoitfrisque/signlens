@@ -1,3 +1,4 @@
+fastapi
 ipdb
 ipywidgets
 jupyter
@@ -9,3 +10,4 @@ jupyterlab-execute-time==2.0.0
 pytest
 pylint
 plotly
+streamlit
