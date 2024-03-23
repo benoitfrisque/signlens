@@ -26,7 +26,6 @@ def train(name_model=None):
         Fore.RED+"Enter the name of the model you want to load (if you want to reset the model press enter):"+Style.RESET_ALL)
     model = load_model(name_model)
     if model is None:
-        import ipdb; ipdb.set_trace()
         model = initialize_model(num_classes=NUM_CLASSES)
     model = compile_model(model)
     model, history = train_model(model, X_train, y_train, patience=10, epochs=10, verbose=1, batch_size=32, validation_data=[
