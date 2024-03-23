@@ -28,7 +28,7 @@ def serialize_landmarks(landmark_list):
 
     '''
     if landmark_list is None:
-        return [{'x': np.nan, 'y': np.nan, 'z': np.nan}]
+        return [{'x': None, 'y': None, 'z': None}]
     landmarks = []
     for landmark in landmark_list.landmark:
         landmarks.append({
@@ -162,3 +162,91 @@ def process_video_to_landmarks(video_path, output=True):
     # Print a success message
     print(f"Landmarks have been extracted and saved to JSON file {json_filename} and parquet file {parquet_filename}.")
     return df
+
+
+def process_video_to_landmarks_json(video_path, output=True):
+    # Initialize mediapipe solutions
+    mp_pose = mp.solutions.pose
+    mp_hands = mp.solutions.hands
+    frame_number = 0
+    # Open video file
+    cap = cv2.VideoCapture(video_path)
+
+    filename = os.path.splitext(os.path.basename(video_path))[0]
+
+    if output:
+        # Prepare CSV and JSON files
+        json_dir = os.path.join(os.path.dirname(video_path), 'json')  # JSON directory
+        os.makedirs(json_dir, exist_ok=True)  # Create directory if it doesn't exist
+        json_filename = os.path.join(json_dir, f'landmarks_{filename}.json')
+        json_file = open(json_filename, 'w', encoding='UTF8')
+
+        parquet_dir = os.path.join(os.path.dirname(video_path), 'parquet')  # Parquet directory
+        os.makedirs(parquet_dir, exist_ok=True)  # Create directory if it doesn't exist
+        parquet_filename = os.path.join(parquet_dir, f'landmarks_{filename}.parquet')
+
+    json_data = []
+
+    # Initialize mediapipe instances
+    with mp_pose.Pose() as pose, mp_hands.Hands() as hands:
+        while cap.isOpened():
+            success, frame = cap.read()
+            if not success:
+                break
+
+            # Convert the BGR image to RGB
+            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Process the image and extract landmarks
+            results_pose = pose.process(image)
+            results_hands = hands.process(image)
+
+            # Extract landmarks for pose, left hand, and right hand
+            landmarks_pose = results_pose.pose_landmarks
+
+            if results_hands.multi_hand_landmarks:
+                # Check if there are any hand landmarks detected
+                if len(results_hands.multi_hand_landmarks) == 1:
+                    # Only one hand detected
+                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
+                    landmarks_right_hand = None
+                elif len(results_hands.multi_hand_landmarks) == 2:
+                    # Both hands detected
+                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
+                    landmarks_right_hand = results_hands.multi_hand_landmarks[1]
+            else:
+                # No hands detected
+                landmarks_left_hand = None
+                landmarks_right_hand = None
+
+            serialized_pose = serialize_landmarks(landmarks_pose)
+            serialized_left_hand = serialize_landmarks(landmarks_left_hand)
+            serialized_right_hand = serialize_landmarks(landmarks_right_hand)
+
+            # Create new index for each landmark type by enumerating
+            for i, landmark in enumerate(serialized_pose):
+                landmark['landmark_index'] = i
+            for i, landmark in enumerate(serialized_left_hand):
+                landmark['landmark_index'] = i
+            for i, landmark in enumerate(serialized_right_hand):
+                landmark['landmark_index'] = i
+
+            # Write serialized landmarks to JSON
+            json_data.append({
+                'frame_number': frame_number,
+                'pose': serialized_pose,
+                'left_hand': serialized_left_hand,
+                'right_hand': serialized_right_hand
+            })
+
+            frame_number += 1
+
+
+    # Close video file
+    cap.release()
+
+    # Write JSON data to file
+    json.dump(json_data, json_file, indent=4)
+
+    # Close files
+    json_file.close()
