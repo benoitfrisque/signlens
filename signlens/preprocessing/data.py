@@ -1,5 +1,6 @@
 # from pathlib import Path
 # from termios import N_SLIP
+import re
 import pandas as pd
 import numpy as np
 from tqdm import tqdm  # Import tqdm for the progress bar
@@ -8,6 +9,7 @@ import sys
 from colorama import Fore, Style
 
 from signlens.params import *
+from signlens.preprocessing.glossary import load_glossary
 
 ################################################################################
 # LOAD CSV
@@ -52,15 +54,14 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
     # Add n_frames column
     if 'n_frames' not in train.columns or 'n_frames2' not in train.columns:
-        train = load_frame_number_parquet(train, csv_path=TRAIN_CSV_PATH)
-
+        train = load_frame_number_parquet(train)
 
     # Filter out sequences with missing frames
     train = filter_sequences_with_missing_frames(train)
 
     new_size = len(train)
     size_ratio = new_size / size
-    print(f"✅ Filtered sequences with missing frames. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
+    print(f"    ℹ️ Filtered sequences with missing frames. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
     size = new_size
 
     # Filter out parquet files with more than n_frames
@@ -68,7 +69,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         train = filter_out_parquet_frame(train, n_frames=n_frames)
         new_size = len(train)
         size_ratio = new_size / size
-        print(f"✅ Filtered on n_frames = {n_frames}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
+        print(f"    ℹ️ Filtered on n_frames = {n_frames}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
         size = new_size
 
     # Balance the data if requested
@@ -76,12 +77,13 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
         # Filter the dataset to include only the selected sign categories
         if n_classes is not None:
             # Select the first n_classes from the glossary
-            all_classes = load_glossary()
-            include_classes = all_classes[:n_classes]['sign'].to_list()
+            all_classes = load_glossary().sign
+            include_classes = all_classes[:n_classes].to_list()
+            import ipdb; ipdb.set_trace()
             train = train[train['sign'].isin(include_classes)]
             new_size = len(train)
             size_ratio = new_size / size
-            print(f"✅ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
+            print(f"    ℹ️ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
             size = new_size
         else:
             include_classes = load_glossary()
@@ -98,7 +100,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
         # If not enough samples, we reduce the sampling size to that value
         if min_size_per_class < target_size_per_class:
-            print(f'⚠️ Total size smaller than requested, with {min_size_per_class} per sign instead of {target_size_per_class}')
+            print(f'    ⚠️ Total size smaller than requested, with {min_size_per_class} per sign instead of {target_size_per_class}')
             target_size_per_class = min_size_per_class
             remaining_samples = 0 # don't add extra samples in this case, we put min_size_per_sign for each sign
 
@@ -121,7 +123,7 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
         new_size = len(train_balanced)
         size_ratio = new_size / size
-        print(f"✅ Balanced data, with average of {size_per_class} elements per class. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
+        print(f"    ℹ️ Balanced data, with average of {size_per_class} elements per class. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
 
         total_size_ratio = new_size / total_size
         print(f"✅ Loaded {size} rows ({total_size_ratio *100:.2f}% of the original {total_size} rows) from the dataset.")
@@ -129,13 +131,15 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
     # Case if not balanced but n_classes is specified
     elif n_classes is not None:
-        include_classes = pd.Series(train['sign'].unique()).sample(n=n_classes, random_state=random_state)
+        # Select the first n_classes from the glossary
+        all_classes = load_glossary().sign
+        include_classes = all_classes[:n_classes].to_list()
         train = train[train['sign'].isin(include_classes)]
         train = train.sample(frac=frac, random_state=random_state)
 
         new_size = len(train)
         size_ratio = new_size / size
-        print(f"✅ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
+        print(f"    ℹ️ Filtered on n_classes = {n_classes}. Size reduced from {size} to {new_size} ({size_ratio*100:.2f}%)")
 
         size = new_size
         total_size_ratio = size / total_size
@@ -153,47 +157,72 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
 
         return train.reset_index(drop=True)
 
-def unique_train_test_split():
+def unique_train_test_split(force_rewrite=False):
+    """
+    Splits the data into unique training and test sets.
+
+    If the training and test data already exist, the function returns without performing any operations.
+
+    Returns:
+        None
+    """
+    if not force_rewrite and os.path.exists(TRAIN_TRAIN_CSV_PATH) and os.path.exists(TRAIN_TEST_CSV_PATH):
+        return print(Fore.BLUE + "Train and test data already exist." + Style.RESET_ALL)
+
     test_size = 0.2
 
-    print(Fore.BLUE + f"Loading unqiue test set with test_size={test_size}" + Style.RESET_ALL)
+    print(Fore.BLUE + Style.BRIGHT + f"\nCreating unique test set with test_size = {test_size}" + Style.RESET_ALL)
 
     test_data = load_data_subset_csv(frac=test_size, noface=False, balanced=True, n_classes=250, n_frames=100, random_state=42, csv_path=TRAIN_CSV_PATH)
 
-    print(Fore.BLUE + "\nLoading training test set" + Style.RESET_ALL)
-    all_data = load_data_subset_csv(frac=1, noface=False, balanced=False, n_classes=250, n_frames=None, random_state=None, csv_path=TRAIN_CSV_PATH)
-    train_data = all_data[~all_data.isin(test_data)]
+    print(Fore.BLUE + Style.BRIGHT + "\nCreating training set" + Style.RESET_ALL)
+
+    all_data = load_data_subset_csv(frac=1, noface=False, balanced=False, n_classes=250, n_frames=None, random_state=42, csv_path=TRAIN_CSV_PATH)
+    train_data = all_data[~all_data['sequence_id'].isin(test_data['sequence_id'])]
 
     total_len = len(all_data)
     train_len = len(train_data)
     test_len = len(test_data)
 
-    test_ratio =  test_len  / total_len
     train_ratio = train_len / total_len
+    test_ratio = test_len  / total_len
 
     print(Fore.BLUE + f"\nTotal loaded rows : {total_len} \
         \nTotal training rows : {train_len} ({train_ratio*100:.2f}%) \
         \nTotal test rows : {test_len} ({test_ratio*100:.2f}%)" + Style.RESET_ALL)
 
-    train_data.drop(columns=['file_path']).to_csv(TRAIN_TRAIN_CSV_PATH, index=False)
-    test_data.drop(columns=['file_path']).to_csv(TRAIN_TEST_CSV_PATH, index=False)
+    train_data = train_data.drop(columns=['file_path'])
+    test_data = test_data.drop(columns=['file_path'])
+
+    train_data.to_csv(TRAIN_TRAIN_CSV_PATH, index=False)
+    test_data.to_csv(TRAIN_TEST_CSV_PATH, index=False)
+
     print(Fore.BLUE + f"\nTrain and test data saved at {TRAIN_TRAIN_CSV_PATH} and {TRAIN_TEST_CSV_PATH}" + Style.RESET_ALL)
 
 
-def write_train_test_csv():
-    test_data, train_data = unique_train_test_split()
-    test_data.to_csv(TRAIN_TEST_CSV_PATH, index=False)
-    train_data.to_csv(TRAIN_TRAIN_CSV_PATH, index=False)
+def count_frames(pq_file_path):
+    """
+    Count the number of unique frames and the number of frames from start to end in a parquet file.
 
+    Parameters:
+    - pq_file_path (str): Path to the parquet file.
 
-def load_frame_number_parquet(train, csv_path):
+    Returns:
+    - pd.Series: A series containing the number of unique frames and the number of frames from start to end.
+    """
+    parquet_df = pd.read_parquet(pq_file_path)
+    n_frames = parquet_df["frame"].nunique()
+    n_frames2 = parquet_df["frame"].iloc[-1] - parquet_df["frame"].iloc[0] + 1
+    return pd.Series([n_frames, n_frames2])
+
+def load_frame_number_parquet(train, frame_count_csv_path=TRAIN_FRAME_CSV_PATH):
     """
     Enhances the input DataFrame by adding 'n_frames' and 'n_frames2' columns indicating the number of frames
     for each referenced parquet file. If '<filename>_frame.csv' exists at 'csv_path', loads DataFrame from it.
 
     Parameters:
     - train (pd.DataFrame): Input DataFrame with 'file_path' column containing parquet file paths.
-    - csv_path (str, optional): Directory path for '<filename>.csv'. Defaults to 'TRAIN_DATA_DIR'.
+    - frame_count_csv_path (str, optional): Directory path for '<filename>.csv'. Defaults to 'TRAIN_FRAME_CSV_PATH'.
 
     Returns:
     - pd.DataFrame: Enhanced DataFrame with 'n_frames' and 'n_frames2' columns. Loads from CSV if exists.
@@ -205,40 +234,21 @@ def load_frame_number_parquet(train, csv_path):
     - If 'n_frames' and 'n_frames2' are not equal, a warning is printed indicating that the parquet file might have missing frames.
     """
 
-    dir_path = os.path.dirname(csv_path)
-    filename, file_extension = os.path.splitext(os.path.basename(csv_path))
-    new_filename = f"{filename}_frame{file_extension}"
-    frame_csv_path = os.path.join(dir_path, new_filename)
-
     # Check if csv file already exists
-    if not os.path.exists(frame_csv_path):
-
-        train_with_frame_count = train.copy()
-        # If not existing create the column and save the data frame
-        with tqdm(total=len(train), desc="Reading parquet files to count frames") as pbar:
-            for i in range(len(train)):
-                pq_file_path = train.loc[i, "file_path"]
-                parquet_df = pd.read_parquet(pq_file_path )
-                n_frames = parquet_df["frame"].nunique() # calculate the number of frames
-                n_frames2 = parquet_df["frame"].iloc[-1] - parquet_df["frame"].iloc[0] + 1 # calculate the number of frames from start to end
-
-                train_with_frame_count.loc[i, "n_frames"] = n_frames
-                train_with_frame_count.loc[i, "n_frames2"] = n_frames2
-
-                pbar.update(1)
-
-        train_with_frame_count = train_with_frame_count[["sequence_id", "n_frames", "n_frames2"]]
-        train_with_frame_count.to_csv(frame_csv_path, index=False)
-        print(f" ✅ File with frame_parquet has been saved at : {frame_csv_path }")
+    if not os.path.exists(frame_count_csv_path):
+        tqdm.pandas(desc="Reading parquet files to count frames")
+        train[['n_frames', 'n_frames2']] = train['file_path'].progress_apply(count_frames)
+        train_with_frame_count = train[["sequence_id", "n_frames", "n_frames2"]]
+        train_with_frame_count.to_csv(frame_count_csv_path, index=False)
+        print(f" ✅ File with frame_parquet has been saved at : {frame_count_csv_path }")
+        return train
 
     # if file exists, load it
     else:
-        train_with_frame_count = pd.read_csv(frame_csv_path)
-        print("✅ File with frames already exists, loaded matching 'sequence_id' rows.")
-
-    train = pd.merge(train, train_with_frame_count, how="left", on='sequence_id')
-
-    return train
+        train_with_frame_count = pd.read_csv(frame_count_csv_path)
+        print(f"    ℹ File with frames already exists, loaded matching 'sequence_id' rows.")
+        train = pd.merge(train, train_with_frame_count, how="left", on='sequence_id')
+        return train
 
 def filter_out_parquet_frame(df, n_frames=MAX_SEQ_LEN):
     """
@@ -272,22 +282,6 @@ def filter_sequences_with_missing_frames(df, threshold=10):
 
     return df[delta < threshold].reset_index(drop=True)
 
-################################################################################
-# LOAD GLOSSARY CSV
-################################################################################
-
-def load_glossary(csv_path=GLOSSARY_CSV_PATH):
-    """
-    Load a glossary from a CSV file into a pandas DataFrame.
-
-    Parameters:
-    - csv_path (str): The file path to the CSV file containing the glossary. Default is GLOSSARY_CSV_PATH.
-
-    Returns:
-    pandas.DataFrame: A DataFrame containing the loaded glossary data.
-    """
-
-    return pd.read_csv(csv_path)
 
 ################################################################################
 # LOAD PARQUET FILES
