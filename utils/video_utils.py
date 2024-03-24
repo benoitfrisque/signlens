@@ -45,14 +45,14 @@ def serialize_landmarks(landmark_list):
     return landmarks
 
 
-def process_video_to_landmarks_json(video_path, output=True, show_preview=True, frame_interval=1, frame_limit=None, rear_camera=True, output_dir=LANDMARKS_VIDEO_DIR):
+def process_video_to_landmarks_json(video_path, json_output=True, save_annotated_video=False, show_preview=True, frame_interval=1, frame_limit=None, rear_camera=True, output_dir=LANDMARKS_VIDEO_DIR):
     """
     Process a video file and extract landmarks from each frame, then save the landmarks as JSON.
     Inspired from https://github.com/google/mediapipe/blob/master/docs/solutions/hands.md
 
     Args:
         video_path (str): The path to the video file.
-        output (bool, optional): Whether to save the landmarks as JSON. Defaults to True.
+        json_output (bool, optional): Whether to save the landmarks as JSON. Defaults to True.
         show_preview (bool, optional): Whether to show a preview of the processed frames. Defaults to True.
         frame_interval (int, optional): The interval between processed frames. Defaults to 1.
         frame_limit (int, optional): The maximum number of frames to process. Defaults to None.
@@ -86,23 +86,31 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
     processed_frames = 0
     loop_complete = False
 
-    # Initialize the window
-    if show_preview:
-        cv2_window_name = f"Video {filename}"
+    # Get the fps of the original video
+    fps = cap.get(cv2.CAP_PROP_FPS)
 
-        # Get the frame width and height
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        cv2.namedWindow(cv2_window_name, cv2.WINDOW_NORMAL) # create empty window
-        move_window_to_center(cv2_window_name, frame_width, frame_height)
+    # Get the frame width and height
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     try:
-        if output:
+        if json_output:
             # Prepare JSON file
             os.makedirs(output_dir, exist_ok=True)
-            json_path = os.path.join(output_dir, f'landmarks_{filename}.json')
+            json_path = os.path.join(output_dir, f'{filename}_landmarks.json')
             json_file = open(json_path, 'w', encoding='UTF8')
+
+        # Initialize preview window
+        if show_preview:
+            cv2_window_name = f"Video {filename}"
+            cv2.namedWindow(cv2_window_name, cv2.WINDOW_NORMAL) # create empty window
+            move_window_to_center(cv2_window_name, frame_width, frame_height)
+
+        # Initialize video writer
+        if save_annotated_video:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # or use 'XVID'
+            annotated_video_path = os.path.join(output_dir, f'{filename}_annotated.mp4')
+            out = cv2.VideoWriter(annotated_video_path, fourcc, fps, (frame_width, frame_height))
 
         # Initialize an empty NormalizedLandmarkList for hand and pose
         empty_hand_landmark_list = create_empty_landmark_list(N_LANDMARKS_HAND)
@@ -128,15 +136,18 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
                 results_pose = pose.process(image_rgb)
                 results_hands = hands.process(image_rgb)
 
-                if show_preview:
+                if show_preview or save_annotated_video:
                     # Draw landmarks on the image
                     annotated_image = draw_landmarks_on_image(image_rgb, results_pose, results_hands, rear_camera)
                     annotated_image_color = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
 
-                    cv2.imshow(cv2_window_name, annotated_image_color)
+                    if show_preview:
+                        cv2.imshow(cv2_window_name, annotated_image_color)
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            break
 
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
+                    if save_annotated_video:
+                        out.write(annotated_image_color)
 
                 # Extract landmarks for pose, left hand, and right hand
                 landmarks_pose = results_pose.pose_landmarks
@@ -179,7 +190,7 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
                 if frame_limit is not None and processed_frames >= frame_limit:
                     break
 
-        if output:
+        if json_output:
             # Write JSON data to file
             json.dump(json_data, json_file, indent=4)
             print(f"✅ Landmarks saved to '{json_path}'")
@@ -197,14 +208,18 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
         if show_preview and cv2.getWindowProperty(cv2_window_name, 0) >= 0:
             cv2.destroyWindow(cv2_window_name)  # close preview window
 
-        if output and json_file is not None:
+        if json_output and json_file is not None:
             # Close file
             json_file.close()
 
-        if output and not loop_complete:
+        if json_output and not loop_complete:
             # Remove JSON file if loop was not completed
             os.remove(json_path)
             print(f"❌ Landmarks file '{json_path}' not written properly.")
+
+        if save_annotated_video:
+            out.release()
+            print(f"✅ Annotated video saved to '{annotated_video_path}'")
 
     return json_data
 
@@ -330,6 +345,7 @@ def draw_landmarks_on_image(rgb_image, results_pose, results_hands, rear_camera)
                 solutions.drawing_styles.get_default_pose_landmarks_style())
 
     return annotated_image
+
 
 def move_window_to_center(cv2_window_name, frame_width, frame_height):
 

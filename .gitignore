@@ -26,7 +26,7 @@ __pycache__
 *.parquet
 *.sqlite
 *.h5
-.csv
+*.mp4
 
 # IDE #
 *.vscode
