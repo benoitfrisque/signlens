@@ -368,7 +368,6 @@ def load_relevant_data_subset(pq_path, noface=True):
     '''
     loads the relevant data from the parquet file.
     If noface is set to True, it excludes landmark 'face'.
-    Fills NaN values with 0.
 
     Args:
         file_path (str or Path): Path to the input parquet file.
@@ -395,8 +394,6 @@ def load_relevant_data_subset(pq_path, noface=True):
     data = data.drop(columns=['type'])
     data_columns = data_columns[:-1]
 
-    # Replace NaN values with 0
-    data.fillna(0, inplace=True)
     n_frames = int(len(data) / frame_rows)
     n_dim = len(data_columns)
     data = data.values.reshape(n_frames, frame_rows, n_dim)
