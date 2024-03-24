@@ -77,105 +77,123 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
 
     cap = cv2.VideoCapture(video_path)
 
-    if output:
-        # Prepare JSON file
-        os.makedirs(output_dir, exist_ok=True)
-        json_path = os.path.join(output_dir, f'landmarks_{filename}.json')
-        json_file = open(json_path, 'w', encoding='UTF8')
-
     json_data = []
     frame_number = 0
     processed_frames = 0
+    loop_complete = False
 
-    # Initialize an empty NormalizedLandmarkList for hand and pose
-    empty_hand_landmark_list = create_empty_landmark_list(N_LANDMARKS_HAND)
-    empty_pose_landmark_list = create_empty_landmark_list(N_LANDMARKS_POSE)
+    try:
+        if output:
+            # Prepare JSON file
+            os.makedirs(output_dir, exist_ok=True)
+            json_path = os.path.join(output_dir, f'landmarks_{filename}.json')
+            json_file = open(json_path, 'w', encoding='UTF8')
 
-    # Initialize mediapipe instances
-    with mp_pose.Pose(static_image_mode=False) as pose, \
-            mp_hands.Hands(static_image_mode=False, max_num_hands=2) as hands:
-        while cap.isOpened():
-            success, frame = cap.read()
-            if not success:
-                break
 
-            # Skip frames based on frame_interval
-            if frame_number % frame_interval != 0:
-                frame_number += 1
-                continue
+        # Initialize an empty NormalizedLandmarkList for hand and pose
+        empty_hand_landmark_list = create_empty_landmark_list(N_LANDMARKS_HAND)
+        empty_pose_landmark_list = create_empty_landmark_list(N_LANDMARKS_POSE)
 
-            # Convert the BGR image to RGB
-            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # Process the image and extract landmarks
-            results_pose = pose.process(image_rgb)
-            results_hands = hands.process(image_rgb)
-
-            if show_preview:
-            # Draw landmarks on the image
-                annotated_image = draw_landmarks_on_image(image_rgb, results_hands, rear_camera)
-                annotated_image_color = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
-                cv2.imshow(f"Video {filename}", annotated_image_color)
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+        # Initialize mediapipe instances
+        with mp_pose.Pose(static_image_mode=False) as pose, \
+                mp_hands.Hands(static_image_mode=False, max_num_hands=2) as hands:
+            while cap.isOpened():
+                success, frame = cap.read()
+                if not success:
                     break
 
-            # Extract landmarks for pose, left hand, and right hand
-            landmarks_pose = results_pose.pose_landmarks
+                # Skip frames based on frame_interval
+                if frame_number % frame_interval != 0:
+                    frame_number += 1
+                    continue
 
-            # Check if there are any pose landmarks detected
-            if landmarks_pose is None:
-                landmarks_pose = empty_pose_landmark_list
+                # Convert the BGR image to RGB
+                image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # Initialize empty hand landmarkks, then overwrite if it finds it
-            landmarks_left_hand = empty_hand_landmark_list
-            landmarks_right_hand = empty_hand_landmark_list
+                # Process the image and extract landmarks
+                results_pose = pose.process(image_rgb)
+                results_hands = hands.process(image_rgb)
 
-            # Check if there are any hand landmarks detected
-            if results_hands.multi_hand_landmarks:
-                # Get handedness of each hand
-                for idx, handedness in enumerate(results_hands.multi_handedness):
-                    hand_side = get_hand_side(handedness, rear_camera)
+                if show_preview:
+                # Draw landmarks on the image
+                    annotated_image = draw_landmarks_on_image(image_rgb, results_hands, rear_camera)
+                    annotated_image_color = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
+                    cv2.imshow(f"Video {filename}", annotated_image_color)
 
-                    if hand_side == 'left':
-                        landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
-                    elif hand_side == 'right':
-                        landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
 
-            serialized_pose = serialize_landmarks(landmarks_pose)
-            serialized_left_hand = serialize_landmarks(landmarks_left_hand)
-            serialized_right_hand = serialize_landmarks(landmarks_right_hand)
+                # Extract landmarks for pose, left hand, and right hand
+                landmarks_pose = results_pose.pose_landmarks
 
-            # Write serialized landmarks to JSON
-            json_data.append({
-                'frame_number': frame_number,
-                'pose': serialized_pose,
-                'left_hand': serialized_left_hand,
-                'right_hand': serialized_right_hand
-            })
+                # Check if there are any pose landmarks detected
+                if landmarks_pose is None:
+                    landmarks_pose = empty_pose_landmark_list
 
-            frame_number += 1
-            processed_frames += 1
+                # Initialize empty hand landmarkks, then overwrite if it finds it
+                landmarks_left_hand = empty_hand_landmark_list
+                landmarks_right_hand = empty_hand_landmark_list
 
-            # Stop processing if frame_limit is reached
-            if frame_limit is not None and processed_frames >= frame_limit:
-                break
+                # Check if there are any hand landmarks detected
+                if results_hands.multi_hand_landmarks:
+                    # Get handedness of each hand
+                    for idx, handedness in enumerate(results_hands.multi_handedness):
+                        hand_side = get_hand_side(handedness, rear_camera)
 
-    # Close video file
-    cap.release()
+                        if hand_side == 'left':
+                            landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
+                        elif hand_side == 'right':
+                            landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
 
-    if show_preview:
-        cv2.destroyWindow(f"Video {filename}")
+                serialized_pose = serialize_landmarks(landmarks_pose)
+                serialized_left_hand = serialize_landmarks(landmarks_left_hand)
+                serialized_right_hand = serialize_landmarks(landmarks_right_hand)
 
-    if output:
-        # Write JSON data to file
-        json.dump(json_data, json_file, indent=4)
-        # Close files
-        json_file.close()
-        print(f"✅ Landmarks saved to '{json_path}'")
+                # Write serialized landmarks to JSON
+                json_data.append({
+                    'frame_number': frame_number,
+                    'pose': serialized_pose,
+                    'left_hand': serialized_left_hand,
+                    'right_hand': serialized_right_hand
+                })
+
+                frame_number += 1
+                processed_frames += 1
+
+                # Stop processing if frame_limit is reached
+                if frame_limit is not None and processed_frames >= frame_limit:
+                    break
+
+        if output:
+            # Write JSON data to file
+            json.dump(json_data, json_file, indent=4)
+            print(f"✅ Landmarks saved to '{json_path}'")
+
+        loop_complete = True
+
+
+    except KeyboardInterrupt:
+        print("Process interrupted by user.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Close video file
+        cap.release()
+
+        if show_preview:
+            cv2.destroyWindow(f"Video {filename}")
+
+        if output and json_file is not None:
+            # Close file
+            json_file.close()
+
+        if output and not loop_complete:
+            # Remove JSON file if loop was not completed
+            os.remove(json_path)
+            print(f"❌ Landmarks file '{json_path}' not written properly.")
+
 
     return json_data
-
 
 
 def create_empty_landmark_list(n_landmarks):
