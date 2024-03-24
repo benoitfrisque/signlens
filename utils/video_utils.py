@@ -1,17 +1,18 @@
 import os
+#import queue
 import json
 import numpy as np
 import pandas as pd
 import mediapipe as mp
 import cv2
-
+import av
 #import pyarrow.csv as pv
 #import pyarrow.parquet as pq
 
 ################################################################################
 # Extract Landmarks to file and dataframe
 ################################################################################
-# TO DO: Dataframe format is packed in columns, need to expand it
+
 def serialize_landmarks(landmark_list):
     '''
     Serialize a list of landmarks into a dictionary format.
@@ -38,7 +39,47 @@ def serialize_landmarks(landmark_list):
         })
     return landmarks
 
+def serialize_landmark(frame_number, landmark_type, landmark_index, landmark):
+    '''
+    Serialize a single landmark into a dictionary format, specifically for parquet compatibility.
+
+    Args:
+        frame_number (int): The frame number of the landmark.
+        landmark_type (str): The type of the landmark (e.g., "right_hand", "left_hand", "face").
+        landmark_index (int): The index of the landmark within the given type.
+        landmark (mediapipe.python.solution_base.Landmark): The landmark object.
+
+    Returns:
+        dict: A dictionary representing the serialized landmark. It contains the following keys:
+            - 'frame': The frame number of the landmark.
+            - 'row_id': A unique identifier for the landmark consisting of the frame number, landmark type, and landmark index.
+            - 'type': The type of the landmark.
+            - 'landmark_index': The index of the landmark within the given type.
+            - 'x': The x-coordinate of the landmark.
+            - 'y': The y-coordinate of the landmark.
+            - 'z': The z-coordinate of the landmark.
+    '''
+    return {
+        "frame": frame_number,
+        "row_id": f"{frame_number}-{landmark_type}-{landmark_index}",
+        "type": landmark_type,
+        "landmark_index": landmark_index,
+        "x": landmark.x,
+        "y": landmark.y,
+        "z": landmark.z
+    }
+
 def process_video_to_landmarks(video_path, output=True):
+    '''
+    Extract landmarks from a video file and save them to a JSON file and a parquet file.
+
+    Args:
+        video_path (str): The path of the video file.
+        output (bool): Whether to save the extracted landmarks to files (default is True).
+
+    Returns:
+        DataFrame: A pandas DataFrame containing the extracted landmarks.
+    '''
     # Initialize mediapipe solutions
     mp_pose = mp.solutions.pose
     mp_hands = mp.solutions.hands
@@ -107,6 +148,7 @@ def process_video_to_landmarks(video_path, output=True):
 
             # Write serialized landmarks to JSON
             json_data.append({
+                #'row_id': row_id,
                 'frame_number': frame_number,
                 'pose': serialized_pose,
                 'left_hand': serialized_left_hand,
@@ -127,26 +169,15 @@ def process_video_to_landmarks(video_path, output=True):
     df = df.explode('right_hand')
     df = df.reset_index(drop=True)
 
-    # Extract landmark data from the DataFrame
-    landmark_data = df[['pose', 'left_hand', 'right_hand']]
-
-    # Replace NaN values with None
-    landmark_data = landmark_data.applymap(lambda x: x if pd.notna(x) else None)
-
-    # Stack the landmark data into a single column
-    landmark_data = landmark_data.stack().reset_index(level=1, drop=True)
-    landmark_data.name = 'landmark'
-
-    # Extract the landmark type, index, and coordinates
-    df['landmark_type'] = landmark_data.apply(lambda x: x.get('type'))
-    df['landmark_index'] = landmark_data.apply(lambda x: x.get('landmark_index'))
-    df['x'] = landmark_data.apply(lambda x: x.get('x'))
-    df['y'] = landmark_data.apply(lambda x: x.get('y'))
-    df['z'] = landmark_data.apply(lambda x: x.get('z'))
+       # magic columns
+    df['type'] = df.apply(lambda x: 'pose' if pd.notna(x['pose']) else ('left_hand' if pd.notna(x['left_hand']) else 'right_hand'), axis=1)
+    df['landmark_index'] = df.apply(lambda x: x['pose'].get('landmark_index') if pd.notna(x['pose']) else (x['left_hand'].get('landmark_index') if pd.notna(x['left_hand']) else x['right_hand'].get('landmark_index')), axis=1)
+    df['row_id'] = df.apply(lambda x: f"{x['frame_number']}-{x['type']}-{x['landmark_index']}", axis=1)
+    df['x'] = df.apply(lambda x: x['pose'].get('x') if pd.notna(x['pose']) else (x['left_hand'].get('x') if pd.notna(x['left_hand']) else x['right_hand'].get('x')), axis=1)
+    df['y'] = df.apply(lambda x: x['pose'].get('y') if pd.notna(x['pose']) else (x['left_hand'].get('y') if pd.notna(x['left_hand']) else x['right_hand'].get('y')), axis=1)
+    df['z'] = df.apply(lambda x: x['pose'].get('z') if pd.notna(x['pose']) else (x['left_hand'].get('z') if pd.notna(x['left_hand']) else x['right_hand'].get('z')), axis=1)
 
     # Drop the original columns
-    df.drop(['pose', 'left_hand', 'right_hand'], axis=1, inplace=True)
-
     df.drop(['pose', 'left_hand', 'right_hand'], axis=1, inplace=True)
 
     # Write DataFrame to parquet file
@@ -160,5 +191,37 @@ def process_video_to_landmarks(video_path, output=True):
     cap.release()
 
     # Print a success message
-    print(f"Landmarks have been extracted and saved to JSON file {json_filename} and parquet file {parquet_filename}.")
+    print(f"Landmarks have been extracted and saved to JSON file {json_filename} and parquet file {parquet_filename} .")
     return df
+
+################################################################################
+# Live Video buffering
+################################################################################
+
+def frame_buffer_callback(frame, frame_buffer):
+    '''
+    Update a FIFO queue with the newest frame.
+
+    Usage: webrtc_streamer(key="example", video_frame_callback=frame_buffer_callback)
+
+    Args:
+        - current frame (av.VideoFrame)
+        - frame_buffer (queue.Queue): A FIFO queue to store the frames
+
+    Returns:
+        - transformed frame (av.VideoFrame)
+        - updated frame buffer (queue.Queue)
+        - DataFrame containing the extracted landmarks
+    '''
+    #frame_buffer = queue.Queue(maxsize=10)
+    img = frame.to_ndarray(format="bgr24")
+
+    # Ensure the buffer is full with 10 frames
+    if frame_buffer.full():
+        frame_buffer.get()  # Remove the oldest frame if the buffer is full
+    frame_buffer.put(img)  # Add the current frame to the buffer
+
+    # Process the frames
+    df = process_video_to_landmarks(frame_buffer, output=False)
+
+    return av.VideoFrame.from_ndarray(img, format="bgr24"), frame_buffer, df
