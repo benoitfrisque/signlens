@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-import json
 from tqdm import tqdm  # Import tqdm for the progress bar
 from pathlib import Path
 from colorama import Fore, Style
