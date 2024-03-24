@@ -10,5 +10,6 @@ jupyterlab-execute-time==2.0.0
 pytest
 pylint
 plotly
+screeninfo
 streamlit
 uvicorn
