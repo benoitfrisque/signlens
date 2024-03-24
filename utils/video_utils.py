@@ -13,6 +13,11 @@ from signlens.params import N_LANDMARKS_HAND, N_LANDMARKS_POSE, LANDMARKS_VIDEO_
 mp_pose = mp.solutions.pose
 mp_hands = mp.solutions.hands
 
+# Constants for drawing landmarks on the image
+MARGIN = 10  # pixels
+FONT_SIZE = 1
+FONT_THICKNESS = 1
+HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
 
 def serialize_landmarks(landmark_list):
     """
@@ -47,8 +52,11 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
     Args:
         video_path (str): The path to the video file.
         output (bool, optional): Whether to save the landmarks as JSON. Defaults to True.
+        show_preview (bool, optional): Whether to show a preview of the processed frames. Defaults to True.
         frame_interval (int, optional): The interval between processed frames. Defaults to 1.
         frame_limit (int, optional): The maximum number of frames to process. Defaults to None.
+        rear_camera (bool, optional): Whether the video was recorded with a rear camera. Defaults to True.
+        output_dir (str, optional): The directory to save the landmarks JSON file. Defaults to LANDMARKS_VIDEO_DIR.
 
     Returns:
         list: A list of dictionaries containing the extracted landmarks for each frame.
@@ -96,11 +104,6 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
                 frame_number += 1
                 continue
 
-            # by default, mediapipe assumes the input image is mirrored, i.e., taken with a front-facing/selfie camera with images flipped horizontally
-            # if you want to process images taken with a webcam/selfie, you can set rear_camera = False
-            if rear_camera:
-                frame = cv2.flip(frame, 1)  # flip around y-axis
-
             # Convert the BGR image to RGB
             image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -110,13 +113,12 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
 
             if show_preview:
             # Draw landmarks on the image
-                annotated_image = draw_landmarks_on_image(image_rgb, results_hands)
+                annotated_image = draw_landmarks_on_image(image_rgb, results_hands, rear_camera)
                 annotated_image_color = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
                 cv2.imshow(f"Video {filename}", annotated_image_color)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
-
 
             # Extract landmarks for pose, left hand, and right hand
             landmarks_pose = results_pose.pose_landmarks
@@ -132,10 +134,8 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
             # Check if there are any hand landmarks detected
             if results_hands.multi_hand_landmarks:
                 # Get handedness of each hand
-                for idx, hand_handedness in enumerate(results_hands.multi_handedness):
-                    handedness_dict = MessageToDict(hand_handedness)
-                    hand_side = handedness_dict['classification'][0]['label'].lower(
-                    )
+                for idx, handedness in enumerate(results_hands.multi_handedness):
+                    hand_side = get_hand_side(handedness, rear_camera)
 
                     if hand_side == 'left':
                         landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
@@ -177,6 +177,7 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
     return json_data
 
 
+
 def create_empty_landmark_list(n_landmarks):
     """
     Create an empty NormalizedLandmarkList.
@@ -201,23 +202,57 @@ def create_empty_landmark_list(n_landmarks):
     return empty_landmark_list
 
 
-MARGIN = 10  # pixels
-FONT_SIZE = 1
-FONT_THICKNESS = 1
-HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
+def get_hand_side(handedness, rear_camera):
+    """
+    Determines the side of the hand based on the handedness classification.
 
-def draw_landmarks_on_image(rgb_image, result_hands):
+    Args:
+        handedness (protobuf message): The handedness classification message.
+        rear_camera (bool): Flag indicating whether the input image is taken with a rear camera.
+
+    Returns:
+        str: The side of the hand ('left' or 'right').
+
+    Notes:
+        By default, mediapipe assumes the input image is mirrored, i.e., taken with a front-facing/selfie camera with images flipped horizontally.
+        If you want to process images taken with a webcam/selfie, you can set rear_camera = False.
+    """
+    handedness_dict = MessageToDict(handedness)
+    hand_side = handedness_dict['classification'][0]['label'].lower()
+
+    if rear_camera:
+        if hand_side == 'left':
+            hand_side = 'right'
+        elif hand_side == 'right':
+            hand_side = 'left'
+
+    return hand_side
+
+def draw_landmarks_on_image(rgb_image, result_hands, rear_camera):
+    """
+    Draws landmarks on the given RGB image based on the detected hand landmarks.
+
+    Args:
+        rgb_image (numpy.ndarray): The RGB image on which to draw the landmarks.
+        result_hands (mediapipe.python.solution_base.SolutionOutputs): The output of the hand detection model.
+        rear_camera (bool): Flag indicating whether the camera is rear-facing or not.
+
+    Returns:
+        numpy.ndarray: The annotated image with landmarks drawn.
+
+    Note:
+        It is normal to see the left hand on the right side and the right hand on the left side if rear_camera=True.
+    """
     annotated_image = np.copy(rgb_image)
 
-    if result_hands.multi_hand_landmarks is None: # results_hands.multi_handedness
+    if result_hands.multi_hand_landmarks is None:
         return annotated_image
 
     # Loop through the detected hands to visualize.
     for idx in range(len(result_hands.multi_hand_landmarks)):
         hand_landmarks = result_hands.multi_hand_landmarks[idx].landmark
         handedness = result_hands.multi_handedness[idx]
-        handedness_dict = MessageToDict(handedness)
-        hand_side = handedness_dict['classification'][0]['label'].lower()
+        hand_side = get_hand_side(handedness, rear_camera)
 
         landmark_pb2.NormalizedLandmarkList()
 
@@ -233,7 +268,6 @@ def draw_landmarks_on_image(rgb_image, result_hands):
           solutions.hands.HAND_CONNECTIONS,
           solutions.drawing_styles.get_default_hand_landmarks_style(),
           solutions.drawing_styles.get_default_hand_connections_style())
-
 
         # Get the top left corner of the detected hand's bounding box.
         height, width, _ = annotated_image.shape
