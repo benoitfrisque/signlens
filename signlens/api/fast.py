@@ -19,19 +19,14 @@ app.add_middleware(
 
 
 # Load model
-# load the model with the above-imported function
-
 model_name = "model 20240322-173411"
-model = load_model(model_name)
+model, _ = load_model(model_name)
 
-app.state.model = model[0]
+app.state.model = model
 # Takes in parquet path
 
-# @app.post("/predict")
-# async def predict(pq_path: str):
-
 @app.post("/predict")
-#async def predict(file: UploadFile = File(...)):
+# async def predict(file: UploadFile = File(...)):
 async def predict(pq_path: str):
 
     model = app.state.model

@@ -3,12 +3,12 @@ import numpy as np
 import multiprocessing as mp
 import tensorflow as tf
 from colorama import Fore, Style
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 from signlens.params import *
 from signlens.preprocessing.data import load_relevant_data_subset, load_glossary
 
-def pad_sequences(sequence, n_frames=MAX_SEQ_LEN):
+
+def pad_and_preprocess_sequence(sequence, n_frames=MAX_SEQ_LEN):
     '''
     Args:
         - NumPy Array: Sequence of landmarks
@@ -16,18 +16,22 @@ def pad_sequences(sequence, n_frames=MAX_SEQ_LEN):
     Returns:
         - Numpy Array: Padded or cut off sequence of landmarks
     '''
+    # Replace nan values with MASK_VALUE
+    sequence[np.isnan(sequence)] = MASK_VALUE
+
     if len(sequence) < n_frames:
         pad_width = int(n_frames - len(sequence))
         sequence = np.pad(sequence, ((0, pad_width), (0, 0),(0, 0)), mode='constant')
     else:
         # TO DO: check if sign is at beginning, middle or end
         sequence = sequence[:n_frames]
+
     return sequence
 
 
-def load_and_pad(pq_file_path):
+def load_pad_preprocess_pq(pq_file_path):
     """
-    Load data from a parquet file and pad the sequence.
+    Load data from a parquet file, pad and preprocess the sequence.
 
     Parameters:
     - pq_file_path (str): Path to the parquet file.
@@ -39,10 +43,10 @@ def load_and_pad(pq_file_path):
     load_data = load_relevant_data_subset(pq_file_path)
 
     # Pad the sequence
-    padded_data = pad_sequences(load_data)
+    data_processed = pad_and_preprocess_sequence(load_data)
 
     # Reshape the data into a 1D array and return it
-    return padded_data.reshape(-1)
+    return data_processed.reshape(-1)
 
 def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
     """
@@ -64,24 +68,41 @@ def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
         # Create a pool of worker processes
         with mp.Pool(mp.cpu_count()) as pool:
             # Use the pool to apply `load_and_pad` to each file path in `df` in parallel
-            data = pool.map(load_and_pad, pq_file_path_df)
+            data_processed = pool.map(load_pad_preprocess_pq, pq_file_path_df)
     except Exception as e:
         print(f"An error occurred with multiprocessing: {e}")
         print("Falling back to sequential processing...")
 
         # Fallback to sequential processing
-        data = [load_and_pad(file_path) for file_path in pq_file_path_df]
+        data_processed = [load_pad_preprocess_pq(pq_file_path) for pq_file_path in pq_file_path_df]
 
-    # Reshape the data into a 3D array and return it
-    data_reshaped = np.array([item.reshape(n_frames, N_LANDMARKS_NO_FACE * 3) for item in data])
+    data_processed = np.array(data_processed)
+    data_tf = reshape_processed_data_to_tf(data_processed)
+    return data_tf
+
+def reshape_processed_data_to_tf(data_processed):
+    """
+    Reshape the processed data (3 or 4 DIMS) into a 3D tensor with 3 DIMS and convert it to a TensorFlow tensor.
+    3 DIMS if batch_size=1
+    for all other cases, 4 DIMS needed
+
+    Parameters:
+    - data (numpy.ndarray): Data to be reshaped.
+
+    Returns:
+    - tf.Tensor: Reshaped data as a TensorFlow tensor.
+    """
+    # case where we provide a single input
+    if data_processed.ndim == 3:
+        data_processed = np.expand_dims(data_processed, axis=0) # expand dim batch_size
+
+    data_reshaped = np.array([item.reshape(MAX_SEQ_LEN, N_LANDMARKS_NO_FACE * 3) for item in data_processed])
     data_tf = tf.convert_to_tensor(data_reshaped)
 
     return data_tf
 
-from sklearn.preprocessing import LabelEncoder
 
-
-def encode_labels(y):
+def encode_labels(y, num_classes=NUM_CLASSES):
     """
     Encode the labels in y based on a provided glossary using TensorFlow's to_categorical.
 
@@ -103,7 +124,7 @@ def encode_labels(y):
     encoded_labels = y.map(label_indices)
 
     # Convert labels to one-hot encoding using TensorFlow's to_categorical
-    encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=NUM_CLASSES)
+    encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=num_classes)
 
     return encoded_labels
 

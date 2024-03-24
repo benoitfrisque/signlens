@@ -5,16 +5,14 @@ import numpy as np
 import pandas as pd
 import mediapipe as mp
 import cv2
-import av
-#import pyarrow.csv as pv
-#import pyarrow.parquet as pq
+import math
+from google.protobuf.json_format import MessageToDict
+from mediapipe.framework.formats import landmark_pb2
 
-################################################################################
-# Extract Landmarks to file and dataframe
-################################################################################
+from signlens.params import N_LANDMARKS_HAND, N_LANDMARKS_POSE, LANDMARKS_VIDEO_DIR
 
 def serialize_landmarks(landmark_list):
-    '''
+    """
     Serialize a list of landmarks into a dictionary format.
 
     Args:
@@ -22,92 +20,87 @@ def serialize_landmarks(landmark_list):
 
     Returns:
         list: A list of dictionaries, where each dictionary represents a landmark and contains the following keys:
-            - 'x': The x-coordinate of the landmark.
-            - 'y': The y-coordinate of the landmark.
-            - 'z': The z-coordinate of the landmark.
-            - 'visibility': The visibility of the landmark (if available), otherwise np.nan.
-
-    '''
-    if landmark_list is None:
-        return [{'x': np.nan, 'y': np.nan, 'z': np.nan}]
+            - 'landmark_index': The index of the landmark in the list.
+            - 'x': The x-coordinate of the landmark. If the value is NaN, it is set to None.
+            - 'y': The y-coordinate of the landmark. If the value is NaN, it is set to None.
+            - 'z': The z-coordinate of the landmark. If the value is NaN, it is set to None.
+    """
     landmarks = []
-    for landmark in landmark_list.landmark:
+    for idx, landmark in enumerate(landmark_list.landmark):
         landmarks.append({
-            'x': landmark.x,
-            'y': landmark.y,
-            'z': landmark.z
+            'landmark_index': idx,
+            'x': None if math.isnan(landmark.x) else landmark.x,
+            'y': None if math.isnan(landmark.y) else landmark.y,
+            'z': None if math.isnan(landmark.z) else landmark.z
         })
     return landmarks
 
-def serialize_landmark(frame_number, landmark_type, landmark_index, landmark):
-    '''
-    Serialize a single landmark into a dictionary format, specifically for parquet compatibility.
+
+def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, frame_limit=None, rear_camera=True, output_dir=LANDMARKS_VIDEO_DIR):
+    """
+    Process a video file and extract landmarks from each frame, then save the landmarks as JSON.
 
     Args:
-        frame_number (int): The frame number of the landmark.
-        landmark_type (str): The type of the landmark (e.g., "right_hand", "left_hand", "face").
-        landmark_index (int): The index of the landmark within the given type.
-        landmark (mediapipe.python.solution_base.Landmark): The landmark object.
+        video_path (str): The path to the video file.
+        output (bool, optional): Whether to save the landmarks as JSON. Defaults to True.
+        frame_interval (int, optional): The interval between processed frames. Defaults to 1.
+        frame_limit (int, optional): The maximum number of frames to process. Defaults to None.
 
     Returns:
-        dict: A dictionary representing the serialized landmark. It contains the following keys:
-            - 'frame': The frame number of the landmark.
-            - 'row_id': A unique identifier for the landmark consisting of the frame number, landmark type, and landmark index.
-            - 'type': The type of the landmark.
-            - 'landmark_index': The index of the landmark within the given type.
-            - 'x': The x-coordinate of the landmark.
-            - 'y': The y-coordinate of the landmark.
-            - 'z': The z-coordinate of the landmark.
-    '''
-    return {
-        "frame": frame_number,
-        "row_id": f"{frame_number}-{landmark_type}-{landmark_index}",
-        "type": landmark_type,
-        "landmark_index": landmark_index,
-        "x": landmark.x,
-        "y": landmark.y,
-        "z": landmark.z
-    }
+        list: A list of dictionaries containing the extracted landmarks for each frame.
 
-def process_video_to_landmarks(video_path, output=True):
-    '''
-    Extract landmarks from a video file and save them to a JSON file and a parquet file.
+    Raises:
+        FileNotFoundError: If the video file specified by `video_path` does not exist.
 
-    Args:
-        video_path (str): The path of the video file.
-        output (bool): Whether to save the extracted landmarks to files (default is True).
+    Example:
+        video_path = '/path/to/video.mp4'
+        landmarks = process_video_to_landmarks_json(video_path, output=True, frame_interval=2, frame_limit=100)
+        print(landmarks)
+    """
 
-    Returns:
-        DataFrame: A pandas DataFrame containing the extracted landmarks.
-    '''
     # Initialize mediapipe solutions
     mp_pose = mp.solutions.pose
     mp_hands = mp.solutions.hands
-    frame_number = 0
+
     # Open video file
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video file '{video_path}' not found.")
+
     cap = cv2.VideoCapture(video_path)
 
-    filename = os.path.splitext(os.path.basename(video_path))[0]
-
     if output:
-        # Prepare CSV and JSON files
-        json_dir = os.path.join(os.path.dirname(video_path), 'json')  # JSON directory
-        os.makedirs(json_dir, exist_ok=True)  # Create directory if it doesn't exist
-        json_filename = os.path.join(json_dir, f'landmarks_{filename}.json')
-        json_file = open(json_filename, 'w', encoding='UTF8')
+        # Prepare JSON file
+        os.makedirs(output_dir, exist_ok=True)
+        filename = os.path.splitext(os.path.basename(video_path))[0]
 
-        parquet_dir = os.path.join(os.path.dirname(video_path), 'parquet')  # Parquet directory
-        os.makedirs(parquet_dir, exist_ok=True)  # Create directory if it doesn't exist
-        parquet_filename = os.path.join(parquet_dir, f'landmarks_{filename}.parquet')
+        json_path = os.path.join(output_dir, f'landmarks_{filename}.json')
+        json_file = open(json_path, 'w', encoding='UTF8')
 
     json_data = []
+    frame_number = 0
+    processed_frames = 0
+
+    # Initialize an empty NormalizedLandmarkList for hand and pose
+    empty_hand_landmark_list = create_empty_landmark_list(N_LANDMARKS_HAND)
+    empty_pose_landmark_list = create_empty_landmark_list(N_LANDMARKS_POSE)
 
     # Initialize mediapipe instances
-    with mp_pose.Pose() as pose, mp_hands.Hands() as hands:
+    with mp_pose.Pose(static_image_mode=False) as pose, \
+            mp_hands.Hands(static_image_mode=False, max_num_hands=2) as hands:
         while cap.isOpened():
             success, frame = cap.read()
             if not success:
                 break
+
+            # Skip frames based on frame_interval
+            if frame_number % frame_interval != 0:
+                frame_number += 1
+                continue
+
+            # by default, mediapipe assumes the input image is mirrored, i.e., taken with a front-facing/selfie camera with images flipped horizontally
+            # if you want to process images taken with a webcam/selfie, you can set rear_camera = False
+            if rear_camera:
+                image = cv2.flip(frame, 1)  # flip around y-axis
 
             # Convert the BGR image to RGB
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -119,32 +112,30 @@ def process_video_to_landmarks(video_path, output=True):
             # Extract landmarks for pose, left hand, and right hand
             landmarks_pose = results_pose.pose_landmarks
 
+            # Check if there are any pose landmarks detected
+            if landmarks_pose is None:
+                landmarks_pose = empty_pose_landmark_list
+
+            # Initialize empty hand landmarkks, then overwrite if it finds it
+            landmarks_left_hand = empty_hand_landmark_list
+            landmarks_right_hand = empty_hand_landmark_list
+
+            # Check if there are any hand landmarks detected
             if results_hands.multi_hand_landmarks:
-                # Check if there are any hand landmarks detected
-                if len(results_hands.multi_hand_landmarks) == 1:
-                    # Only one hand detected
-                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
-                    landmarks_right_hand = None
-                elif len(results_hands.multi_hand_landmarks) == 2:
-                    # Both hands detected
-                    landmarks_left_hand = results_hands.multi_hand_landmarks[0]
-                    landmarks_right_hand = results_hands.multi_hand_landmarks[1]
-            else:
-                # No hands detected
-                landmarks_left_hand = None
-                landmarks_right_hand = None
+                # Get handedness of each hand
+                for idx, hand_handedness in enumerate(results_hands.multi_handedness):
+                    handedness_dict = MessageToDict(hand_handedness)
+                    hand_side = handedness_dict['classification'][0]['label'].lower(
+                    )
+
+                    if hand_side == 'left':
+                        landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
+                    elif hand_side == 'right':
+                        landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
 
             serialized_pose = serialize_landmarks(landmarks_pose)
             serialized_left_hand = serialize_landmarks(landmarks_left_hand)
             serialized_right_hand = serialize_landmarks(landmarks_right_hand)
-
-            # Create new index for each landmark type by enumerating
-            for i, landmark in enumerate(serialized_pose):
-                landmark['landmark_index'] = i
-            for i, landmark in enumerate(serialized_left_hand):
-                landmark['landmark_index'] = i
-            for i, landmark in enumerate(serialized_right_hand):
-                landmark['landmark_index'] = i
 
             # Write serialized landmarks to JSON
             json_data.append({
@@ -156,72 +147,44 @@ def process_video_to_landmarks(video_path, output=True):
             })
 
             frame_number += 1
+            processed_frames += 1
 
-    # Write JSON data to file
-    json.dump(json_data, json_file, indent=4)
-
-    # Convert JSON data to pandas DataFrame
-    df = pd.json_normalize(json_data)
-
-    # Expand the DataFrame format
-    df = df.explode('pose')
-    df = df.explode('left_hand')
-    df = df.explode('right_hand')
-    df = df.reset_index(drop=True)
-
-       # magic columns
-    df['type'] = df.apply(lambda x: 'pose' if pd.notna(x['pose']) else ('left_hand' if pd.notna(x['left_hand']) else 'right_hand'), axis=1)
-    df['landmark_index'] = df.apply(lambda x: x['pose'].get('landmark_index') if pd.notna(x['pose']) else (x['left_hand'].get('landmark_index') if pd.notna(x['left_hand']) else x['right_hand'].get('landmark_index')), axis=1)
-    df['row_id'] = df.apply(lambda x: f"{x['frame_number']}-{x['type']}-{x['landmark_index']}", axis=1)
-    df['x'] = df.apply(lambda x: x['pose'].get('x') if pd.notna(x['pose']) else (x['left_hand'].get('x') if pd.notna(x['left_hand']) else x['right_hand'].get('x')), axis=1)
-    df['y'] = df.apply(lambda x: x['pose'].get('y') if pd.notna(x['pose']) else (x['left_hand'].get('y') if pd.notna(x['left_hand']) else x['right_hand'].get('y')), axis=1)
-    df['z'] = df.apply(lambda x: x['pose'].get('z') if pd.notna(x['pose']) else (x['left_hand'].get('z') if pd.notna(x['left_hand']) else x['right_hand'].get('z')), axis=1)
-
-    # Drop the original columns
-    df.drop(['pose', 'left_hand', 'right_hand'], axis=1, inplace=True)
-
-    # Write DataFrame to parquet file
-    if output:
-        df.to_parquet(parquet_filename)
-
-    # Close files
-    json_file.close()
+            # Stop processing if frame_limit is reached
+            if frame_limit is not None and processed_frames >= frame_limit:
+                break
 
     # Close video file
     cap.release()
 
-    # Print a success message
-    print(f"Landmarks have been extracted and saved to JSON file {json_filename} and parquet file {parquet_filename} .")
-    return df
+    if output:
+        # Write JSON data to file
+        json.dump(json_data, json_file, indent=4)
+        # Close files
+        json_file.close()
+        print(f"✅ Landmarks saved to '{json_path}'")
 
-################################################################################
-# Live Video buffering
-################################################################################
+    return json_data
 
-def frame_buffer_callback(frame, frame_buffer):
-    '''
-    Update a FIFO queue with the newest frame.
 
-    Usage: webrtc_streamer(key="example", video_frame_callback=frame_buffer_callback)
+def create_empty_landmark_list(n_landmarks):
+    """
+    Create an empty NormalizedLandmarkList.
 
     Args:
-        - current frame (av.VideoFrame)
-        - frame_buffer (queue.Queue): A FIFO queue to store the frames
+        n_landmarks (int): The number of landmarks to create.
 
     Returns:
-        - transformed frame (av.VideoFrame)
-        - updated frame buffer (queue.Queue)
-        - DataFrame containing the extracted landmarks
-    '''
-    #frame_buffer = queue.Queue(maxsize=10)
-    img = frame.to_ndarray(format="bgr24")
+        landmark_pb2.NormalizedLandmarkList: An empty NormalizedLandmarkList.
 
-    # Ensure the buffer is full with 10 frames
-    if frame_buffer.full():
-        frame_buffer.get()  # Remove the oldest frame if the buffer is full
-    frame_buffer.put(img)  # Add the current frame to the buffer
+    """
+    # Initialize an empty NormalizedLandmarkList for hand
+    empty_landmark_list = landmark_pb2.NormalizedLandmarkList()
 
-    # Process the frames
-    df = process_video_to_landmarks(frame_buffer, output=False)
+    # Add empty landmarks to the list
+    for _ in range(n_landmarks):
+        landmark = empty_landmark_list.landmark.add()
+        landmark.x = np.nan  # We use nan and not None because it doesn't work with None
+        landmark.y = np.nan
+        landmark.z = np.nan
 
-    return av.VideoFrame.from_ndarray(img, format="bgr24"), frame_buffer, df
+    return empty_landmark_list
