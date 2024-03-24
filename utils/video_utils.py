@@ -19,6 +19,7 @@ FONT_SIZE = 1
 FONT_THICKNESS = 1
 HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
 
+
 def serialize_landmarks(landmark_list):
     """
     Serialize a list of landmarks into a dictionary format.
@@ -76,11 +77,25 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
         raise FileNotFoundError(f"Video file '{video_path}' not found.")
 
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Error opening video file '{video_path}'")
+        return
 
     json_data = []
     frame_number = 0
     processed_frames = 0
     loop_complete = False
+
+    # Initialize the window
+    if show_preview:
+        cv2_window_name = f"Video {filename}"
+
+        # Get the frame width and height
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        cv2.namedWindow(cv2_window_name, cv2.WINDOW_NORMAL) # create empty window
+        move_window_to_center(cv2_window_name, frame_width, frame_height)
 
     try:
         if output:
@@ -88,7 +103,6 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
             os.makedirs(output_dir, exist_ok=True)
             json_path = os.path.join(output_dir, f'landmarks_{filename}.json')
             json_file = open(json_path, 'w', encoding='UTF8')
-
 
         # Initialize an empty NormalizedLandmarkList for hand and pose
         empty_hand_landmark_list = create_empty_landmark_list(N_LANDMARKS_HAND)
@@ -115,10 +129,11 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
                 results_hands = hands.process(image_rgb)
 
                 if show_preview:
-                # Draw landmarks on the image
-                    annotated_image = draw_landmarks_on_image(image_rgb, results_hands, rear_camera)
+                    # Draw landmarks on the image
+                    annotated_image = draw_landmarks_on_image(image_rgb, results_pose, results_hands, rear_camera)
                     annotated_image_color = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
-                    cv2.imshow(f"Video {filename}", annotated_image_color)
+
+                    cv2.imshow(cv2_window_name, annotated_image_color)
 
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
@@ -171,17 +186,16 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
 
         loop_complete = True
 
-
     except KeyboardInterrupt:
         print("Process interrupted by user.")
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        # Close video file
-        cap.release()
 
-        if show_preview:
-            cv2.destroyWindow(f"Video {filename}")
+        cap.release()  # Close video file
+
+        if show_preview and cv2.getWindowProperty(cv2_window_name, 0) >= 0:
+            cv2.destroyWindow(cv2_window_name)  # close preview window
 
         if output and json_file is not None:
             # Close file
@@ -191,7 +205,6 @@ def process_video_to_landmarks_json(video_path, output=True, show_preview=True, 
             # Remove JSON file if loop was not completed
             os.remove(json_path)
             print(f"❌ Landmarks file '{json_path}' not written properly.")
-
 
     return json_data
 
@@ -246,57 +259,96 @@ def get_hand_side(handedness, rear_camera):
 
     return hand_side
 
-def draw_landmarks_on_image(rgb_image, result_hands, rear_camera):
+
+def draw_landmarks_on_image(rgb_image, results_pose, results_hands, rear_camera):
     """
     Draws landmarks on the given RGB image based on the detected hand landmarks.
 
     Args:
-        rgb_image (numpy.ndarray): The RGB image on which to draw the landmarks.
-        result_hands (mediapipe.python.solution_base.SolutionOutputs): The output of the hand detection model.
-        rear_camera (bool): Flag indicating whether the camera is rear-facing or not.
+            rgb_image (numpy.ndarray): The RGB image on which to draw the landmarks.
+            results_pose (mediapipe.python.solution_base.SolutionOutputs): The output of the pose detection model.
+            results_hands (mediapipe.python.solution_base.SolutionOutputs): The output of the hand detection model.
+            rear_camera (bool): Flag indicating whether the camera is rear-facing or not.
 
     Returns:
-        numpy.ndarray: The annotated image with landmarks drawn.
+            numpy.ndarray: The annotated image with landmarks drawn.
 
     Note:
-        It is normal to see the left hand on the right side and the right hand on the left side if rear_camera=True.
+            It is normal to see the left hand on the right side and the right hand on the left side if rear_camera=True.
     """
+
     annotated_image = np.copy(rgb_image)
 
-    if result_hands.multi_hand_landmarks is None:
+    if results_hands.multi_hand_landmarks is None and results_pose is None:
         return annotated_image
 
-    # Loop through the detected hands to visualize.
-    for idx in range(len(result_hands.multi_hand_landmarks)):
-        hand_landmarks = result_hands.multi_hand_landmarks[idx].landmark
-        handedness = result_hands.multi_handedness[idx]
-        hand_side = get_hand_side(handedness, rear_camera)
+    if results_hands.multi_hand_landmarks is not None:
+        # Loop through the detected hands to visualize.
+        for idx in range(len(results_hands.multi_hand_landmarks)):
+            hand_landmarks = results_hands.multi_hand_landmarks[idx].landmark
+            handedness = results_hands.multi_handedness[idx]
+            hand_side = get_hand_side(handedness, rear_camera)
 
-        landmark_pb2.NormalizedLandmarkList()
+            hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+            hand_landmarks_proto.landmark.extend([
+                landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
+            ])
 
-        hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-        hand_landmarks_proto.landmark.extend([
-          landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
-        ])
+            # Draw the hand landmarks.
+            solutions.drawing_utils.draw_landmarks(
+                annotated_image,
+                hand_landmarks_proto,
+                solutions.hands.HAND_CONNECTIONS,
+                solutions.drawing_styles.get_default_hand_landmarks_style(),
+                solutions.drawing_styles.get_default_hand_connections_style())
 
-        # Draw the hand landmarks.
-        solutions.drawing_utils.draw_landmarks(
-          annotated_image,
-          hand_landmarks_proto,
-          solutions.hands.HAND_CONNECTIONS,
-          solutions.drawing_styles.get_default_hand_landmarks_style(),
-          solutions.drawing_styles.get_default_hand_connections_style())
+            # Get the top left corner of the detected hand's bounding box.
+            height, width, _ = annotated_image.shape
+            x_coordinates = [landmark.x for landmark in hand_landmarks]
+            y_coordinates = [landmark.y for landmark in hand_landmarks]
+            text_x = int(min(x_coordinates) * width)
+            text_y = int(min(y_coordinates) * height) - MARGIN
 
-        # Get the top left corner of the detected hand's bounding box.
-        height, width, _ = annotated_image.shape
-        x_coordinates = [landmark.x for landmark in hand_landmarks]
-        y_coordinates = [landmark.y for landmark in hand_landmarks]
-        text_x = int(min(x_coordinates) * width)
-        text_y = int(min(y_coordinates) * height) - MARGIN
+            # Draw handedness (left or right hand) on the image.
+            cv2.putText(annotated_image, f"{hand_side}",
+                        (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
+                        FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)
 
-        # Draw handedness (left or right hand) on the image.
-        cv2.putText(annotated_image, f"{hand_side}",
-                    (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
-                    FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)
+        if results_pose is not None:
+            pose_landmarks = results_pose.pose_landmarks.landmark
+
+            pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+            pose_landmarks_proto.landmark.extend([
+                landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
+            ])
+
+          # Draw the pose landmarks.
+            solutions.drawing_utils.draw_landmarks(
+                annotated_image,
+                pose_landmarks_proto,
+                solutions.pose.POSE_CONNECTIONS,
+                solutions.drawing_styles.get_default_pose_landmarks_style())
 
     return annotated_image
+
+def move_window_to_center(cv2_window_name, frame_width, frame_height):
+
+    if cv2.getWindowProperty(cv2_window_name, 0) >= 0: # Check if the window is still open
+
+        try:
+            # Get the screen size
+            from screeninfo import get_monitors
+            screen_width = get_monitors()[0].width
+            screen_height = get_monitors()[0].height
+        except ImportError:
+            print("screeninfo module not found, using default screen size.")
+            screen_width = 800
+            screen_height = 600
+
+        # Calculate the position to place the window in the middle of the screen
+        window_x = screen_width // 2 - frame_width // 2
+        window_y = screen_height // 2 - frame_height // 2
+
+        # Move the window to the calculated position
+        cv2.moveWindow(cv2_window_name, window_x, window_y)
+        cv2.resizeWindow(cv2_window_name, frame_width, frame_height)
