@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import json
 from tqdm import tqdm  # Import tqdm for the progress bar
 from pathlib import Path
 from colorama import Fore, Style
@@ -421,7 +422,7 @@ def load_relevant_data_subset_per_landmark_type(pq_path):
     data_right_hand = data[data.type == 'right_hand'][[
         'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
     data_pose = data[data.type == 'pose'][['x', 'y', 'z']
-                                          ].values.reshape(n_frames, N_LANDMAKRS_POSE, 3)
+                                          ].values.reshape(n_frames, N_LANDMARKS_POSE, 3)
     data_dict = {
         'pose': data_pose,
         'left_hand': data_left_hand,
@@ -501,3 +502,37 @@ def load_video_list_json(video_list_json_path: str = WLASL_JSON_PATH, filter_glo
     videos_df = videos_df.reset_index(drop=True)
 
     return videos_df
+
+
+def load_landmarks_json(landmarks_json_path):
+    """
+    Load landmarks data from a JSON file.
+
+    Args:
+        landmarks_json_path (str): The path to the JSON file containing the landmarks data.
+
+    Returns:
+        numpy.ndarray: A numpy array containing the landmarks data.
+
+    """
+    data = pd.read_json(landmarks_json_path)
+
+    n_frames = len(data)
+
+    # Initialize numpy array
+    array = np.empty((n_frames, N_LANDMARKS_NO_FACE, 3))
+
+    # Populate numpy array
+    # Populate numpy array
+    for i, row in data.iterrows():
+        pose_landmarks = row['pose']
+        left_hand_landmarks = row['left_hand']
+        right_hand_landmarks = row['right_hand']
+
+        # Combine all landmarks into one list
+        all_landmarks = pose_landmarks + left_hand_landmarks + right_hand_landmarks
+
+        for j, landmark in enumerate(all_landmarks):
+            array[i, j] = [landmark['x'], landmark['y'], landmark['z']]
+
+    return array

@@ -13,6 +13,8 @@ MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN"))
 # Percentage of the data to load
 DATA_FRAC = float(os.environ.get("DATA_FRAC"))
 
+MASK_VALUE = 0
+
 ##################  CONSTANTS  #####################
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 RAW_DATA_DIR = os.path.join(BASE_DIR, 'raw_data')
@@ -35,6 +37,7 @@ TRAIN_TRAIN_CSV_PATH    = os.path.join(PROCESSED_DATA_DIR , 'train_train.csv')
 TRAIN_TEST_CSV_PATH     = os.path.join(PROCESSED_DATA_DIR , 'train_test.csv')
 TRAIN_FRAME_CSV_PATH    = os.path.join(PROCESSED_DATA_DIR , 'train_frame.csv')
 GLOSSARY_CSV_PATH       = os.path.join(PROCESSED_DATA_DIR, 'glossary.csv')
+LANDMARKS_VIDEO_DIR     = os.path.join(PROCESSED_DATA_DIR, 'landmarks_videos')
 
 
 TRAIN_OUTPUT_DIR        = os.path.join(BASE_DIR, 'training_outputs')
@@ -43,5 +46,5 @@ TRAIN_OUTPUT_DIR        = os.path.join(BASE_DIR, 'training_outputs')
 N_LANDMARKS_HAND    = 21
 N_LANDMARKS_POSE    = 33
 N_LANDMARKS_FACE    = 468
-N_LANDMARKS_ALL     = 543   # N_LANDMARKS_HAND * 2 +  N_LANDMAKRS_POSE + N_LANDMARKS_FACE
+N_LANDMARKS_ALL     = 543   # N_LANDMARKS_HAND * 2 +  N_LANDMARKS_POSE + N_LANDMARKS_FACE
 N_LANDMARKS_NO_FACE = 75    # N_LANDMAKRS_POSE + 2 * N_LANDMARKS_HAND
