@@ -1,14 +1,18 @@
 import os
 import json
 import numpy as np
-import pandas as pd
 import mediapipe as mp
 import cv2
 import math
 from google.protobuf.json_format import MessageToDict
 from mediapipe.framework.formats import landmark_pb2
+from mediapipe import solutions
 
 from signlens.params import N_LANDMARKS_HAND, N_LANDMARKS_POSE, LANDMARKS_VIDEO_DIR
+
+mp_pose = mp.solutions.pose
+mp_hands = mp.solutions.hands
+
 
 def serialize_landmarks(landmark_list):
     """
@@ -35,9 +39,10 @@ def serialize_landmarks(landmark_list):
     return landmarks
 
 
-def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, frame_limit=None, rear_camera=True, output_dir=LANDMARKS_VIDEO_DIR):
+def process_video_to_landmarks_json(video_path, output=True, show_preview=True, frame_interval=1, frame_limit=None, rear_camera=True, output_dir=LANDMARKS_VIDEO_DIR):
     """
     Process a video file and extract landmarks from each frame, then save the landmarks as JSON.
+    Inspired from https://github.com/google/mediapipe/blob/master/docs/solutions/hands.md
 
     Args:
         video_path (str): The path to the video file.
@@ -56,10 +61,7 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
         landmarks = process_video_to_landmarks_json(video_path, output=True, frame_interval=2, frame_limit=100)
         print(landmarks)
     """
-
-    # Initialize mediapipe solutions
-    mp_pose = mp.solutions.pose
-    mp_hands = mp.solutions.hands
+    filename = os.path.splitext(os.path.basename(video_path))[0]
 
     # Open video file
     if not os.path.exists(video_path):
@@ -70,8 +72,6 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
     if output:
         # Prepare JSON file
         os.makedirs(output_dir, exist_ok=True)
-        filename = os.path.splitext(os.path.basename(video_path))[0]
-
         json_path = os.path.join(output_dir, f'landmarks_{filename}.json')
         json_file = open(json_path, 'w', encoding='UTF8')
 
@@ -99,14 +99,24 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
             # by default, mediapipe assumes the input image is mirrored, i.e., taken with a front-facing/selfie camera with images flipped horizontally
             # if you want to process images taken with a webcam/selfie, you can set rear_camera = False
             if rear_camera:
-                image = cv2.flip(frame, 1)  # flip around y-axis
+                frame = cv2.flip(frame, 1)  # flip around y-axis
 
             # Convert the BGR image to RGB
-            image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             # Process the image and extract landmarks
-            results_pose = pose.process(image)
-            results_hands = hands.process(image)
+            results_pose = pose.process(image_rgb)
+            results_hands = hands.process(image_rgb)
+
+            if show_preview:
+            # Draw landmarks on the image
+                annotated_image = draw_landmarks_on_image(image_rgb, results_hands)
+                annotated_image_color = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
+                cv2.imshow(f"Video {filename}", annotated_image_color)
+
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
 
             # Extract landmarks for pose, left hand, and right hand
             landmarks_pose = results_pose.pose_landmarks
@@ -154,6 +164,9 @@ def process_video_to_landmarks_json(video_path, output=True, frame_interval=1, f
     # Close video file
     cap.release()
 
+    if show_preview:
+        cv2.destroyWindow(f"Video {filename}")
+
     if output:
         # Write JSON data to file
         json.dump(json_data, json_file, indent=4)
@@ -186,3 +199,52 @@ def create_empty_landmark_list(n_landmarks):
         landmark.z = np.nan
 
     return empty_landmark_list
+
+
+MARGIN = 10  # pixels
+FONT_SIZE = 1
+FONT_THICKNESS = 1
+HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
+
+def draw_landmarks_on_image(rgb_image, result_hands):
+    annotated_image = np.copy(rgb_image)
+
+    if result_hands.multi_hand_landmarks is None: # results_hands.multi_handedness
+        return annotated_image
+
+    # Loop through the detected hands to visualize.
+    for idx in range(len(result_hands.multi_hand_landmarks)):
+        hand_landmarks = result_hands.multi_hand_landmarks[idx].landmark
+        handedness = result_hands.multi_handedness[idx]
+        handedness_dict = MessageToDict(handedness)
+        hand_side = handedness_dict['classification'][0]['label'].lower()
+
+        landmark_pb2.NormalizedLandmarkList()
+
+        hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+        hand_landmarks_proto.landmark.extend([
+          landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
+        ])
+
+        # Draw the hand landmarks.
+        solutions.drawing_utils.draw_landmarks(
+          annotated_image,
+          hand_landmarks_proto,
+          solutions.hands.HAND_CONNECTIONS,
+          solutions.drawing_styles.get_default_hand_landmarks_style(),
+          solutions.drawing_styles.get_default_hand_connections_style())
+
+
+        # Get the top left corner of the detected hand's bounding box.
+        height, width, _ = annotated_image.shape
+        x_coordinates = [landmark.x for landmark in hand_landmarks]
+        y_coordinates = [landmark.y for landmark in hand_landmarks]
+        text_x = int(min(x_coordinates) * width)
+        text_y = int(min(y_coordinates) * height) - MARGIN
+
+        # Draw handedness (left or right hand) on the image.
+        cv2.putText(annotated_image, f"{hand_side}",
+                    (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
+                    FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)
+
+    return annotated_image
