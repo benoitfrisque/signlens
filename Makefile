@@ -23,7 +23,6 @@ create_virtual_env:
 create_output_dir:
 	@mkdir -p training_outputs
 
-
 reset_output_dir:
 	@rm -rf training_outputs
 	@make -s create_output_dir
@@ -32,15 +31,24 @@ run_preprocess:
 	python -c 'from signlens.interface.main import preprocess; preprocess()'
 
 run_train:
+	@make -s create_output_dir
 	python -c 'from signlens.interface.main import train; train()'
 
 #run_pred:
 #python -c 'from signlens.interface.main import pred; pred()'
 
+# Use 'make run_evaluate' or 'run_evaluate 42' to run the evaluation (42 is a random_state)
 run_evaluate:
-	python -c 'from signlens.interface.main import evaluate; evaluate()'
+	@python -c 'from signlens.interface.main import evaluate; evaluate($(filter-out $@,$(MAKECMDGOALS)))'
+%:
+	@:
 
-run_all: run_train run_evaluate
+# Use 'make run_all' to run the whole pipeline or 'make run_all 42' to run the whole pipeline with a random_state
+run_all:
+	@make -s create_output_dir
+	python -c 'from signlens.interface.main import main; main($(filter-out $@,$(MAKECMDGOALS)))'
+%:
+	@:
 
 run_api:
 	uvicorn signlens.api.fast:app --reload

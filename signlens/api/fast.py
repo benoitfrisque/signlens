@@ -38,7 +38,7 @@ async def predict(pq_path: str):
     if not pq_path:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    processed_data = group_pad_sequences(pd.Series([pq_path]))
+    processed_data = preprocess_and_pad_sequences_from_pq_list(pd.Series([pq_path]))
 
     prediction = model.predict([processed_data])
 
