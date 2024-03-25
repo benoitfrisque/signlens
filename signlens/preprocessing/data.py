@@ -335,7 +335,7 @@ def unique_train_test_split(force_rewrite=False):
 
     all_data = load_data_subset_csv(frac=1, noface=False, balanced=False,
                                     n_classes=250, n_frames=None, random_state=42, csv_path=TRAIN_CSV_PATH)
-    train_data = all_data[~all_data['sequence_id'].isin(
+    train_data = all_data[all_data['sequence_id'].isin(
         test_data['sequence_id'])]
 
     total_len = len(all_data)
