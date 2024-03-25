@@ -15,3 +15,7 @@ tensorflow; sys_platform == 'win32' or 'linux' in sys_platform # Windows and Lin
 tensorflow-macos; sys_platform == 'darwin' and 'ARM' in platform_version # Mac M-chips
 tqdm
 typing
+fastapi
+ipdb
+uvicorn
+screeninfo
