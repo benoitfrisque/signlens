@@ -12,6 +12,7 @@ import pickle
 import os
 import time
 
+
 def create_folder_model():
     """
     Creates a model directory with a unique timestamp and several subdirectories.
@@ -51,12 +52,13 @@ def create_folder_model():
     return paths
 
 
-def save_model(model,model_path):
+def save_model(model, model_path):
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     model_path = os.path.join(model_path, f"model_{timestamp}.keras")
     model.save(model_path)
 
-def save_results(params: dict, metrics: dict,params_path,metrics_path,mode="train") -> None:
+
+def save_results(params: dict, metrics: dict, params_path, metrics_path, mode="train") -> None:
     """
     Persist params & metrics locally on the hard drive at
     "{LOCAL_REGISTRY_PATH}/params/{current_timestamp}.pickle"
@@ -68,19 +70,23 @@ def save_results(params: dict, metrics: dict,params_path,metrics_path,mode="trai
 
     # Save params locally
     if params is not None:
-        if mode=="train":
-            params_path = os.path.join(params_path, f"training_{timestamp}.pickle")
+        if mode == "train":
+            params_path = os.path.join(
+                params_path, f"training_{timestamp}.pickle")
         else:
-            params_path = os.path.join(params_path, f"evaluate_{timestamp}.pickle")
+            params_path = os.path.join(
+                params_path, f"evaluate_{timestamp}.pickle")
         with open(params_path, "wb") as file:
             pickle.dump(params, file)
 
     # Save metrics locally
     if metrics is not None:
-        if mode=="train":
-            metrics_path = os.path.join(metrics_path, f"training_{timestamp}.pickle")
+        if mode == "train":
+            metrics_path = os.path.join(
+                metrics_path, f"training_{timestamp}.pickle")
         else:
-            metrics_path = os.path.join(metrics_path, f"evaluate_{timestamp}.pickle")
+            metrics_path = os.path.join(
+                metrics_path, f"evaluate_{timestamp}.pickle")
 
         with open(metrics_path, "wb") as file:
             pickle.dump(metrics, file)
@@ -100,26 +106,30 @@ def load_model(model_name_folder=None) -> keras.Model:
     print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
 
     # Get the latest model version name by the timestamp on the disk
-    if model_name_folder is None or model_name_folder=="":
-        print(Fore.RED +"Please put the name of the model folder" + Style.RESET_ALL)
+    if model_name_folder is None or model_name_folder == "":
+        print(Fore.RED + "Please put the name of the model folder" + Style.RESET_ALL)
         return None
-    local_model_paths = glob.glob(os.path.join(TRAIN_OUTPUT_DIR, f"{model_name_folder}*"))
+    local_model_paths = glob.glob(os.path.join(
+        TRAIN_OUTPUT_DIR, f"{model_name_folder}*"))
 
     if not local_model_paths:
-        print(Fore.RED +f"No Folder named {model_name_folder} found" + Style.RESET_ALL)
+        print(
+            Fore.RED + f"No Folder named {model_name_folder} found" + Style.RESET_ALL)
         return None
 
-    most_recent_model_path_on_disk = sorted(local_model_paths, key=os.path.getctime)[-1]
+    most_recent_model_path_on_disk = sorted(
+        local_model_paths, key=os.path.getctime)[-1]
 
     print(Fore.BLUE + f"\nLoad latest model from disk..." + Style.RESET_ALL)
 
-    keras_files = glob.glob(os.path.join(most_recent_model_path_on_disk,'model', "*.keras"))[0]
+    keras_files = glob.glob(os.path.join(
+        most_recent_model_path_on_disk, 'model', "*.keras"))[0]
 
     latest_model = keras.models.load_model(keras_files)
 
     print(f"✅ Model loaded from local disk {most_recent_model_path_on_disk}")
 
-    return latest_model,most_recent_model_path_on_disk
+    return latest_model, most_recent_model_path_on_disk
 
 
 def plot_history(history, metric='accuracy', title=None):
@@ -135,7 +145,7 @@ def plot_history(history, metric='accuracy', title=None):
     - None: This function plots the training history but does not return any value.
     """
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13,4))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 4))
 
     # Create the plots
     ax1.plot(history.history['loss'])
@@ -158,11 +168,11 @@ def plot_history(history, metric='accuracy', title=None):
     ax2.legend(['Train', 'Validation'], loc='best')
 
     # Show grids
-    ax1.grid(axis="x",linewidth=0.5)
-    ax1.grid(axis="y",linewidth=0.5)
+    ax1.grid(axis="x", linewidth=0.5)
+    ax1.grid(axis="y", linewidth=0.5)
 
-    ax2.grid(axis="x",linewidth=0.5)
-    ax2.grid(axis="y",linewidth=0.5)
+    ax2.grid(axis="x", linewidth=0.5)
+    ax2.grid(axis="y", linewidth=0.5)
 
     if title:
         fig.suptitle(title)
@@ -185,7 +195,7 @@ def plot_history_interactive(history, metric='accuracy', title=None):
 
     def plot_hist(y_min, y_max, epoch_min, epoch_max):
         # Setting figures
-        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(13,4))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 4))
 
         # Create the plots
         ax1.plot(history.history['loss'])
@@ -207,7 +217,6 @@ def plot_history_interactive(history, metric='accuracy', title=None):
         ax1.legend(['Train', 'Validation'], loc='best')
         ax2.legend(['Train', 'Validation'], loc='best')
 
-
         ax1.set_xlim(epoch_min, epoch_max)
         ax2.set_xlim(epoch_min, epoch_max)
 
@@ -215,15 +224,14 @@ def plot_history_interactive(history, metric='accuracy', title=None):
         ax2.set_ylim(y_min, y_max)
 
         # Show grids
-        ax1.grid(axis="x",linewidth=0.5)
-        ax1.grid(axis="y",linewidth=0.5)
+        ax1.grid(axis="x", linewidth=0.5)
+        ax1.grid(axis="y", linewidth=0.5)
 
-        ax2.grid(axis="x",linewidth=0.5)
-        ax2.grid(axis="y",linewidth=0.5)
+        ax2.grid(axis="x", linewidth=0.5)
+        ax2.grid(axis="y", linewidth=0.5)
 
         if title:
             fig.suptitle(title)
-
 
     y_min_slider = FloatSlider(
         value=0,

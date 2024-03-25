@@ -29,7 +29,10 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_
     model.add(Input(shape=(n_frames, n_landmarks * 3)))
     model.add(Masking(mask_value=0.0))
 
-    model.add(SimpleRNN(units=128, return_sequences=True))
+    model.add(SimpleRNN(units=256, return_sequences=True))
+    model.add(Dropout(0.5))
+
+    model.add(LSTM(units=128, return_sequences=True))
     model.add(Dropout(0.5))
 
     model.add(LSTM(units=64))

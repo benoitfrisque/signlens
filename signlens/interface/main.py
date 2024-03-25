@@ -26,8 +26,8 @@ def train(name_model=None):
     model = load_model(name_model)
     if model is None:
         model=initialize_model(num_classes=y_train.shape[1])
-    model=compile_model(model)
-    model, history=train_model(model,X_train,y_train,patience=10,epochs=10,verbose=1,batch_size=32,validation_data=[X_val,y_val],model_save_epoch_path=paths["model_each_epoch_path"])
+    model=compile_model(model,learning_rate=0.01)
+    model, history=train_model(model,X_train,y_train,patience=20,epochs=500,verbose=1,batch_size=64,validation_data=[X_val,y_val],model_save_epoch_path=paths["model_each_epoch_path"])
     val_accuracy = np.max(history.history['val_accuracy'])
     val_loss = np.max(history.history['val_loss'])
 
