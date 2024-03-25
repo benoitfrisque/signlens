@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-import json
 from tqdm import tqdm  # Import tqdm for the progress bar
 from pathlib import Path
 from colorama import Fore, Style
@@ -368,7 +367,6 @@ def load_relevant_data_subset(pq_path, noface=True):
     '''
     loads the relevant data from the parquet file.
     If noface is set to True, it excludes landmark 'face'.
-    Fills NaN values with 0.
 
     Args:
         file_path (str or Path): Path to the input parquet file.
@@ -395,8 +393,6 @@ def load_relevant_data_subset(pq_path, noface=True):
     data = data.drop(columns=['type'])
     data_columns = data_columns[:-1]
 
-    # Replace NaN values with 0
-    data.fillna(0, inplace=True)
     n_frames = int(len(data) / frame_rows)
     n_dim = len(data_columns)
     data = data.values.reshape(n_frames, frame_rows, n_dim)
@@ -423,6 +419,64 @@ def load_relevant_data_subset_per_landmark_type(pq_path):
         'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
     data_pose = data[data.type == 'pose'][['x', 'y', 'z']
                                           ].values.reshape(n_frames, N_LANDMARKS_POSE, 3)
+    data_dict = {
+        'pose': data_pose,
+        'left_hand': data_left_hand,
+        'right_hand': data_right_hand
+    }
+    return data_dict
+
+
+def load_relevant_data_subset_per_landmark_type_from_json(json_path):
+    """
+    Load a relevant data subset per landmark type from a JSON file.
+
+    Args:
+        json_path (str): The path to the JSON file.
+
+    Returns:
+        dict: A dictionary containing the loaded data subset per landmark type.
+            The dictionary has the following keys:
+            - 'pose': A numpy array of shape (n_frames, N_LANDMARKS_POSE, 3) containing pose data.
+            - 'left_hand': A numpy array of shape (n_frames, N_LANDMARKS_HAND, 3) containing left hand data.
+            - 'right_hand': A numpy array of shape (n_frames, N_LANDMARKS_HAND, 3) containing right hand data.
+    """
+    data = pd.read_json(json_path)
+
+    n_frames = len(data)
+
+    # Initialize numpy arrays
+    data_pose = np.empty((n_frames, N_LANDMARKS_POSE, 3))
+    data_left_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
+    data_right_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
+
+    # Populate numpy arrays
+    for i, row in data.iterrows():
+        pose_landmarks = row['pose']
+        left_hand_landmarks = row['left_hand']
+        right_hand_landmarks = row['right_hand']
+
+        # Populate pose data
+        for idx, landmark in enumerate(pose_landmarks):
+            x = landmark['x'] if landmark.get('x') is not None else np.nan
+            y = landmark['y'] if landmark.get('y') is not None else np.nan
+            z = landmark['z'] if landmark.get('z') is not None else np.nan
+            data_pose[i, idx, :] = [x, y, z]
+
+        # Populate left hand data
+        for idx, landmark in enumerate(left_hand_landmarks):
+            x = landmark['x'] if landmark.get('x') is not None else np.nan
+            y = landmark['y'] if landmark.get('y') is not None else np.nan
+            z = landmark['z'] if landmark.get('z') is not None else np.nan
+            data_left_hand[i, idx, :] = [x, y, z]
+
+        # Populate right hand data
+        for idx, landmark in enumerate(right_hand_landmarks):
+            x = landmark['x'] if landmark.get('x') is not None else np.nan
+            y = landmark['y'] if landmark.get('y') is not None else np.nan
+            z = landmark['z'] if landmark.get('z') is not None else np.nan
+            data_right_hand[i, idx, :] = [x, y, z]
+
     data_dict = {
         'pose': data_pose,
         'left_hand': data_left_hand,
@@ -522,7 +576,6 @@ def load_landmarks_json(landmarks_json_path):
     # Initialize numpy array
     array = np.empty((n_frames, N_LANDMARKS_NO_FACE, 3))
 
-    # Populate numpy array
     # Populate numpy array
     for i, row in data.iterrows():
         pose_landmarks = row['pose']

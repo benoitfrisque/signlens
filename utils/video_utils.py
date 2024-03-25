@@ -169,7 +169,7 @@ def process_video_to_landmarks_json(video_path, json_output=True, save_annotated
                         if hand_side == 'left':
                             landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
                         elif hand_side == 'right':
-                            landmarks_left_hand = results_hands.multi_hand_landmarks[idx]
+                            landmarks_right_hand = results_hands.multi_hand_landmarks[idx]
 
                 serialized_pose = serialize_landmarks(landmarks_pose)
                 serialized_left_hand = serialize_landmarks(landmarks_left_hand)
