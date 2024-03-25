@@ -12,6 +12,8 @@ COPY setup.py setup.py
 
 COPY utils utils
 
+COPY models_api models_api
+
 RUN pip install .
 
 CMD uvicorn signlens.api.fast:app --host 0.0.0.0 --port 8000

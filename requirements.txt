@@ -19,3 +19,4 @@ fastapi
 ipdb
 uvicorn
 screeninfo
+ipywidgets
