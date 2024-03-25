@@ -48,7 +48,7 @@ def load_pad_preprocess_pq(pq_file_path):
     # Reshape the data into a 1D array and return it
     return data_processed.reshape(-1)
 
-def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
+def preprocess_and_pad_sequences_from_pq_list(pq_file_path_df, n_frames=MAX_SEQ_LEN):
     """
     Load data from multiple files, pad the sequences, and group them into a single array.
     If an error occurs during multiprocessing, falls back to sequential processing.
