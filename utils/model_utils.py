@@ -96,17 +96,18 @@ def load_model(model_name_folder=None) -> keras.Model:
     Return None (but do not Raise) if no model is found
 
     """
-
+    import ipdb; ipdb.set_trace()
     print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
 
     # Get the latest model version name by the timestamp on the disk
     if model_name_folder is None or model_name_folder=="":
         print(Fore.RED +"Please put the name of the model folder" + Style.RESET_ALL)
-        return None
+
     local_model_paths = glob.glob(os.path.join(TRAIN_OUTPUT_DIR, f"{model_name_folder}*"))
 
+
     if not local_model_paths:
-        print(Fore.RED +f"No Folder named {model_name_folder} found" + Style.RESET_ALL)
+        print(f"No folder containing '{model_name_folder}' found")
         return None
 
     most_recent_model_path_on_disk = sorted(local_model_paths, key=os.path.getctime)[-1]

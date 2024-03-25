@@ -47,8 +47,11 @@ def train(X_train, X_val, y_train, y_val, paths, patience=10, epochs=10, verbose
         row_count=len(X_train),
     )
 
-    save_results(params=params, metrics=dict(val_accuracy=val_accuracy, val_loss=val_loss),
-                 params_path=paths["params_path"], metrics_path=paths["metrics_path"])
+    save_results(params=params,
+                 metrics=dict(val_accuracy=val_accuracy, val_loss=val_loss),
+                 params_path=paths["params_path"],
+                 metrics_path=paths["metrics_path"]
+                 )
 
     save_model(model=model, model_path=paths["model_path"])
 
@@ -63,6 +66,11 @@ def evaluate(name_model=None):
 
     model, path = load_model(name_model)
     assert model is not None
+
+    test_data = load_data_subset_csv(balanced=True, csv_path=TRAIN_TEST_CSV_PATH)
+    X_test = preprocess_and_pad_sequences_from_pq_list(test_data.file_path)
+    y_test = encode_labels(test_data.sign)
+
     metrics_dict = evaluate_model(model=model, X=X_test, y=y_test)
     accuracy = metrics_dict['accuracy']
     loss = metrics_dict['loss']
@@ -72,8 +80,12 @@ def evaluate(name_model=None):
         training_frac=DATA_FRAC,
         row_count=len(X_test),
     )
-    save_results(params=params, metrics=dict(val_accuracy=accuracy, val_loss=loss), params_path=os.path.join(
-        path, "params"), metrics_path=os.path.join(path, "metrics"), mode="evaluate")
+
+    save_results(params=params,
+                 metrics=dict(val_accuracy=accuracy, val_loss=loss),
+                 params_path=os.path.join(path, "params"),
+                 metrics_path=os.path.join(path, "metrics"),
+                 mode="evaluate")
 
     print("✅ evaluate() done \n")
 
@@ -83,12 +95,7 @@ def main():
     unique_train_test_split()
     X_train, X_val, y_train, y_val = preprocess()
     train(X_train, X_val, y_train, y_val, paths)
-
-    test_data = load_data_subset_csv(balanced=True, csv_path=TRAIN_TEST_CSV_PATH)
-    X_test = preprocess_and_pad_sequences_from_pq_list(test_data.file_path)
-
-    y_test = encode_labels(test_data.sign)
-
+    evaluate()
 
 if __name__ == "__main__":
     main()

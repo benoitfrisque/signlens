@@ -23,7 +23,6 @@ create_virtual_env:
 create_output_dir:
 	@mkdir -p training_outputs
 
-
 reset_output_dir:
 	@rm -rf training_outputs
 	@make -s create_output_dir
@@ -32,6 +31,7 @@ run_preprocess:
 	python -c 'from signlens.interface.main import preprocess; preprocess()'
 
 run_train:
+	@make -s create_output_dir
 	python -c 'from signlens.interface.main import train; train()'
 
 #run_pred:
@@ -40,7 +40,9 @@ run_train:
 run_evaluate:
 	python -c 'from signlens.interface.main import evaluate; evaluate()'
 
-run_all: run_train run_evaluate
+run_all:
+	@make -s create_output_dir
+	python -c 'from signlens.interface.main import main; main()'
 
 run_api:
 	uvicorn signlens.api.fast:app --reload
