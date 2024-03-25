@@ -1,9 +1,11 @@
 import pandas as pd
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+import json
 
-from signlens.preprocessing.preprocess import group_pad_sequences, decode_labels
+from signlens.preprocessing.preprocess import decode_labels, pad_and_preprocess_sequence, reshape_processed_data_to_tf
+from signlens.preprocessing.data import load_landmarks_json
 from utils.model_utils import load_model
 
 app = FastAPI()
@@ -23,22 +25,20 @@ model_name = "model 20240322-173411"
 model, _ = load_model(model_name)
 
 app.state.model = model
-# Takes in parquet path
 
+
+# Takes in json path
+"""
 @app.post("/predict")
-# async def predict(file: UploadFile = File(...)):
-async def predict(pq_path: str):
+async def predict(landmarks_json_path: str):
 
     model = app.state.model
 
-    # Check if file is empty
-
-    # if not file:
-
-    if not pq_path:
+    if not landmarks_json_path:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    processed_data = group_pad_sequences(pd.Series([pq_path]))
+
+    processed_data = preprocess_and_pad_sequences_from_pq_list(pd.Series([pq_path]))
 
     prediction = model.predict([processed_data])
 
@@ -52,75 +52,52 @@ def root():
 
     return {"API is working"}
 
+    landmarks = load_landmarks_json(landmarks_json_path)
+    data_processed = pad_and_preprocess_sequence(landmarks)
+    data_tf = reshape_processed_data_to_tf(data_processed)
 
+    prediction = model.predict(data_tf)
 
-# Run --> uvicorn signlens.api.fast:app --reload
+    word, proba = decode_labels(prediction)
 
+    word = str(word[0])
+    proba = float(proba[0])
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-# Load the data
-from signlens.preprocessing import data
-from .env import *
-data = load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False,
-                     n_classes=NUM_CLASSES, n_frames=MAX_SEQ_LEN,
-                     random_state=None, csv_path=TRAIN_TRAIN_CSV_PATH)
-
-# Load the relevant data from the parquet file (load relevant subset function)
-from signlens.preprocessing import preprocess
-    # load_relevant_data_subset(pq_path, noface=True)
-    # loads landmarks as numpy array
-
-# Pad sequences
-from signlens.preprocessing import preprocess
-    # pad_sequences(sequence, n_frames=MAX_SEQ_LEN)
-
-
-# Load function that transforms
-
-# (load_relevant_data_subset_per_landmark_type)
-
-
-# POST request
+    return {'Word:': word, 'Probability:': proba}
 """
 
-
-"""
-# Model.predict
-@app.get("/predict")
-def predict():  # needs to take landmarks or parquet files
+# Takes in a JSON file
+@app.post("/predict")
+async def upload_file(file: UploadFile = File(...)):
 
     model = app.state.model
-    assert model is not None
 
-    model.predict
-    # :warning: fastapi only accepts simple Python data types as a return value
-    # among them dict, list, str, int, float, bool
-    # in order to be able to convert the api response to JSON
-    return
-"""
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+
+    json_data = await file.read()
+    json_text = json_data.decode('utf-8')
+    json_object = json.loads(json_text)
+    json_df = pd.DataFrame(json_object)
+
+    landmarks = load_landmarks_json(json_df)
+    data_processed = pad_and_preprocess_sequence(landmarks)
+    data_tf = reshape_processed_data_to_tf(data_processed)
+
+    prediction = model.predict(data_tf)
+
+    word, proba = decode_labels(prediction)
+
+    word = str(word[0])
+    proba = float(proba[0])
+
+    return {'Word:': word, 'Probability:': proba}
+
+@app.get("/")
+def root():
+
+    return {"Welcome to FastAPI"}
+
+# Run --> uvicorn signlens.api.fast:app --reload
+# Test JSON file: /Users/max/code/benoitfrisque/signlens/processed_data/07070_landmarks.json

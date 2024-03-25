@@ -41,6 +41,9 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
     print(Fore.BLUE +
           f"Loading data subset from {os.path.basename(csv_path)}" + Style.RESET_ALL)
 
+    if random_state is not None:
+        print(f"    ℹ️ Random state set for data loading : {random_state}")
+
     train = pd.read_csv(csv_path)  # load the specified document
 
     total_size = len(train)  # total size
@@ -335,8 +338,9 @@ def unique_train_test_split(force_rewrite=False):
 
     all_data = load_data_subset_csv(frac=1, noface=False, balanced=False,
                                     n_classes=250, n_frames=None, random_state=42, csv_path=TRAIN_CSV_PATH)
-    train_data = all_data[~all_data['sequence_id'].isin(
-        test_data['sequence_id'])]
+
+    # take the difference between the two sets
+    train_data = all_data[~all_data['sequence_id'].isin(test_data['sequence_id'])]
 
     total_len = len(all_data)
     train_len = len(train_data)
@@ -557,35 +561,35 @@ def load_video_list_json(video_list_json_path: str = WLASL_JSON_PATH, filter_glo
 
     return videos_df
 
-
-def load_landmarks_json(landmarks_json_path):
+def load_landmarks_json_from_path(path):
     """
     Load landmarks data from a JSON file.
-
     Args:
-        landmarks_json_path (str): The path to the JSON file containing the landmarks data.
-
+        path (str): The path to the JSON file containing the landmarks data.
     Returns:
         numpy.ndarray: A numpy array containing the landmarks data.
-
     """
-    data = pd.read_json(landmarks_json_path)
+    json_data = pd.read_json(path)
+    return load_landmarks_json(json_data)
 
-    n_frames = len(data)
-
+def load_landmarks_json(json_data):
+    """
+    Load landmarks from a JSON file and convert them into a numpy array.
+    Args:
+        json_data (pandas.DataFrame): The JSON data containing the landmarks.
+    Returns:
+        numpy.ndarray: A numpy array containing the landmarks.
+    """
+    n_frames = len(json_data)
     # Initialize numpy array
     array = np.empty((n_frames, N_LANDMARKS_NO_FACE, 3))
-
     # Populate numpy array
-    for i, row in data.iterrows():
+    for i, row in json_data.iterrows():
         pose_landmarks = row['pose']
         left_hand_landmarks = row['left_hand']
         right_hand_landmarks = row['right_hand']
-
         # Combine all landmarks into one list
         all_landmarks = pose_landmarks + left_hand_landmarks + right_hand_landmarks
-
         for j, landmark in enumerate(all_landmarks):
             array[i, j] = [landmark['x'], landmark['y'], landmark['z']]
-
     return array

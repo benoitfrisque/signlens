@@ -1,18 +1,17 @@
 import os
-import matplotlib.pyplot as plt
-from ipywidgets import interact, FloatSlider
-from IPython.display import display
-from colorama import Fore, Style
-from tensorflow import keras
-from signlens.params import *
 import glob
 import time
 import pickle
 
-import os
-import time
+import matplotlib.pyplot as plt
+from ipywidgets import interact, FloatSlider
+from colorama import Fore, Style
+from tensorflow.keras import models
 
-def create_folder_model():
+from signlens.params import *
+
+
+def create_model_folder(training_output_dir=TRAIN_OUTPUT_DIR):
     """
     Creates a model directory with a unique timestamp and several subdirectories.
 
@@ -26,49 +25,52 @@ def create_folder_model():
     """
     # Generate a timestamp for the folder name
     timestamp = time.strftime("%Y%m%d-%H%M%S")
-    model_path = os.path.join(TRAIN_OUTPUT_DIR, f"model {timestamp}")
+    model_base_dir_name = f"model_{timestamp}"
 
-    # Create the model directory
-    os.mkdir(model_path)
+    paths = get_model_subdir_paths(model_base_dir_name, training_output_dir=training_output_dir)
 
-    # Initialize a dictionary to store the paths
-    paths = {}
+    for path in paths.values():
+        os.makedirs(path)
+
+    return paths
+
+def get_model_subdir_paths(model_base_dir_name, training_output_dir=TRAIN_OUTPUT_DIR):
+    # Construct the path to the model directory
+    model_base_dir = os.path.join(training_output_dir, model_base_dir_name)
 
     # Define subdirectories
     subdirs = ['model', 'plots', 'log', 'metrics', 'params']
 
-    # Create subdirectories and store their paths
-    for subdir in subdirs:
-        subdir_path = os.path.join(model_path, subdir)
-        paths[f'{subdir}_path'] = subdir_path
-        os.mkdir(subdir_path)
+    # Initialize a dictionary to store the paths
+    paths = {}
 
-    # Create 'model each epoch' as a subdirectory of 'model'
-    model_each_epoch_path = os.path.join(paths['model_path'], 'iter')
-    paths['model_each_epoch_path'] = model_each_epoch_path
-    os.mkdir(model_each_epoch_path)
+    # Get the paths to the subdirectories
+    for subdir in subdirs:
+        subdir_path = os.path.join(model_base_dir, subdir)
+        paths[subdir] = subdir_path
+
+    sub_subdir_path = os.path.join(model_base_dir, 'model', 'iter')
+    paths['iter'] = sub_subdir_path
 
     return paths
 
-
-def save_model(model,model_path):
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    model_path = os.path.join(model_path, f"model_{timestamp}.keras")
-    model.save(model_path)
-
-def save_results(params: dict, metrics: dict,params_path,metrics_path,mode="train") -> None:
+def save_results(params, metrics, params_path, metrics_path, mode) :
     """
-    Persist params & metrics locally on the hard drive at
-    "{LOCAL_REGISTRY_PATH}/params/{current_timestamp}.pickle"
-    "{LOCAL_REGISTRY_PATH}/metrics/{current_timestamp}.pickle"
-    - (unit 03 only) if MODEL_TARGET='mlflow', also persist them on MLflow
+    Save the parameters and metrics locally.
+
+    Args:
+        params (object): The parameters to be saved.
+        metrics (object): The metrics to be saved.
+        params_path (str): The path to save the parameters.
+        metrics_path (str): The path to save the metrics.
+        mode (str): The mode of operation (train, eval).
     """
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
 
     # Save params locally
     if params is not None:
-        if mode=="train":
+        if mode == "train":
             params_path = os.path.join(params_path, f"training_{timestamp}.pickle")
         else:
             params_path = os.path.join(params_path, f"evaluate_{timestamp}.pickle")
@@ -77,7 +79,7 @@ def save_results(params: dict, metrics: dict,params_path,metrics_path,mode="trai
 
     # Save metrics locally
     if metrics is not None:
-        if mode=="train":
+        if mode == "train":
             metrics_path = os.path.join(metrics_path, f"training_{timestamp}.pickle")
         else:
             metrics_path = os.path.join(metrics_path, f"evaluate_{timestamp}.pickle")
@@ -88,38 +90,167 @@ def save_results(params: dict, metrics: dict,params_path,metrics_path,mode="trai
     print("✅ Results saved locally")
 
 
-def load_model(model_name_folder=None) -> keras.Model:
+def save_model(model, model_path):
     """
-    Return a saved model:
-    - locally (latest one in alphabetical order)
+    Save the given model to the specified model_path.
 
-    Return None (but do not Raise) if no model is found
+    Args:
+        model (keras.Model): The model to be saved.
+        model_path (str): The path where the model should be saved.
+
+    Returns:
+        None
+    """
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    model_path = os.path.join(model_path, f"model_{timestamp}.keras")
+    model.save(model_path)
+
+
+def load_model(mode='most_recent', model_base_dir_pattern=None, model_path=None, training_output_dir=TRAIN_OUTPUT_DIR, return_paths=False):
+    """
+    Load a model based on the specified mode.
+
+    Args:
+        mode (str, optional): The mode for loading the model. Defaults to 'most_recent'. Accepted values are 'most_recent' and 'from_path'.
+        model_base_dir_pattern (str, optional): The pattern for the base directory of the model. Defaults to None.
+        model_path (str, optional): The path to the model file. Mandatory when mode is 'from_path'. Defaults to None.
+        training_output_dir (str, optional): The directory where the training output is stored. Defaults to TRAIN_OUTPUT_DIR.
+        return_paths (bool, optional): Whether to return the paths of the loaded model. Defaults to False.
+
+    Returns:
+        model: The loaded model.
+        model_paths (list): The paths of the loaded model (only returned if return_paths is True).
+
+    Raises:
+        ValueError: If the mode is not recognized.
 
     """
 
-    print(Fore.BLUE + f"\nLoad latest model from local registry..." + Style.RESET_ALL)
+    if mode == 'most_recent':
+        if model_base_dir_pattern is None:
+            print(Fore.YELLOW + "No model name provided. Loading most recent model." + Style.RESET_ALL)
 
-    # Get the latest model version name by the timestamp on the disk
-    if model_name_folder is None or model_name_folder=="":
-        print(Fore.RED +"Please put the name of the model folder" + Style.RESET_ALL)
+        return load_most_recent_model(model_base_dir_pattern, training_output_dir, return_paths=return_paths)
+
+    elif mode == 'from_path':
+        if model_base_dir_pattern is not None:
+            print(Fore.YELLOW + f"The pattern {model_base_dir_pattern} provided with 'from_path' option will be ignored" + Style.RESET_ALL)
+
+        if model_path is None:
+            print(Fore.RED + "No model path provided. Mandatory with 'from_path' option" + Style.RESET_ALL)
+            if return_paths:
+                return None, None
+            return None
+
+        if return_paths:
+            raise NotImplementedError("Returning model paths is not implemented for 'from_path' mode.")
+
+        if not os.path.exists(model_path):
+            print(Fore.RED + f"Model path {model_path} does not exist. Please check the path." + Style.RESET_ALL)
+            if return_paths:
+                return None, None
+            return None
+
+        model = models.load_model(model_path)
+        return model
+
+    else:
+        raise ValueError('Mode not recognized. Please use either "most_recent" or "from_path"')
+
+def load_most_recent_model(model_base_dir_pattern=None, training_output_dir=TRAIN_OUTPUT_DIR, return_paths=False):
+    """
+    Load the most recent model from the specified model base directory.
+
+    Args:
+        model_base_dir_pattern (str, optional): Pattern to match the model base directory. Defaults to None.
+        training_output_dir (str, optional): Directory where the training output is stored. Defaults to TRAIN_OUTPUT_DIR.
+        return_paths (bool, optional): Whether to return the paths of all models in the model base directory. Defaults to False.
+
+    Returns:
+        most_recent_model (tensorflow.keras.Model): The most recent model loaded from the model base directory.
+        model_paths (list): List of paths to all models in the model base directory (if return_paths is True).
+    """
+
+    model_base_dir = get_most_recent_model_base_directory(model_base_dir_pattern, training_output_dir)
+
+    if model_base_dir is None:
+        print(Fore.RED + f"No model matching {model_base_dir_pattern}. Please check the model directory." + Style.RESET_ALL)
+        if return_paths:
+            return None, None
         return None
-    local_model_paths = glob.glob(os.path.join(TRAIN_OUTPUT_DIR, f"{model_name_folder}*"))
 
-    if not local_model_paths:
-        print(Fore.RED +f"No Folder named {model_name_folder} found" + Style.RESET_ALL)
+    most_recent_model_path = get_most_recent_model_path(model_base_dir)
+
+    if most_recent_model_path is None:
+        print(Fore.RED + f"No model found in {model_base_dir}. Please check the model directory." + Style.RESET_ALL)
+        if return_paths:
+            return None, None
         return None
 
-    most_recent_model_path_on_disk = sorted(local_model_paths, key=os.path.getctime)[-1]
+    print(Fore.GREEN + f"Loading model from: '{most_recent_model_path}'"+ Style.RESET_ALL)
 
-    print(Fore.BLUE + f"\nLoad latest model from disk...{most_recent_model_path_on_disk}" + Style.RESET_ALL)
+    most_recent_model = models.load_model(most_recent_model_path)
 
-    keras_files = glob.glob(os.path.join(most_recent_model_path_on_disk,'model', "*.keras"))[0]
+    if return_paths:
+        model_paths = get_model_subdir_paths(model_base_dir, training_output_dir=training_output_dir)
+        return most_recent_model, model_paths
 
-    latest_model = keras.models.load_model(keras_files)
+    return most_recent_model
 
-    print(f"✅ Model loaded from local disk {most_recent_model_path_on_disk}")
 
-    return latest_model, most_recent_model_path_on_disk
+def get_most_recent_model_base_directory(model_base_dir_pattern=None, training_output_dir=TRAIN_OUTPUT_DIR):
+    """
+    Get the most recent model base directory that matches the given pattern.
+
+    Args:
+        model_base_dir_pattern (str, optional): Pattern to match the model base directories. If None, all directories will be considered.
+        training_output_dir (str, optional): Directory where the model base directories are located.
+
+    Returns:
+        str: The path of the most recent model base directory that matches the given pattern, or None if no matching directory is found.
+    """
+
+    # If model_pattern is None, look for all directories
+    if model_base_dir_pattern is None:
+        model_base_dir_pattern = "*"
+
+    # Get a list of all directories that contain the model_pattern
+    model_directories = glob.glob(os.path.join(training_output_dir, f"*{model_base_dir_pattern}*"))
+
+    # Check if there are any matching directories
+    if not model_directories:
+        return None
+
+    # Get the most recent directory
+    most_recent_directory = max(model_directories, key=os.path.getctime)
+
+    return most_recent_directory
+
+def get_most_recent_model_path(model_base_dir, model_format='.keras'):
+    """
+    Get the path to the most recent model file in the specified directory.
+
+    Args:
+        model_base_dir (str): The base directory where the model files are stored.
+        model_format (str, optional): The format of the model files. Defaults to '.keras'.
+
+    Returns:
+        str: The path to the most recent model file, or None if no matching files are found.
+    """
+
+    model_dir = os.path.join(model_base_dir, 'model')
+    model_files = glob.glob(os.path.join(model_dir, f"*{model_format}"))
+
+    # Check if there are any matching files
+    if not model_files:
+        return None
+
+    # Get the most recent file
+    most_recent_model_file = max(model_files, key=os.path.getctime)
+
+    # Return the path to the most recent model file
+    return most_recent_model_file
+
 
 
 def plot_history(history, metric='accuracy', title=None):

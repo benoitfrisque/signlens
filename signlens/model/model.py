@@ -1,12 +1,10 @@
 from sklearn.model_selection import train_test_split
-from tensorflow.keras import Model, Sequential
+from tensorflow.keras import Sequential
 from tensorflow.keras.layers import TimeDistributed, LSTM, Dense, Masking, Flatten, Dropout, SimpleRNN, Reshape, Bidirectional, Input
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from typing import Tuple
 from colorama import Fore, Style
-import time
-import numpy as np
 
 from signlens.params import *
 
@@ -27,7 +25,7 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_
     model = Sequential()
 
     model.add(Input(shape=(n_frames, n_landmarks * 3)))
-    model.add(Masking(mask_value=0.0))
+    model.add(Masking(mask_value=MASK_VALUE))
 
 
     model.add(LSTM(units=256, return_sequences=True))
@@ -47,7 +45,7 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_
     return model
 
 
-def compile_model(model: Model, learning_rate=0.001):
+def compile_model(model, learning_rate=0.001):
     """
     This function compiles a given Keras Model with Adam optimizer, categorical crossentropy as loss function and accuracy as metrics.
 
@@ -64,20 +62,18 @@ def compile_model(model: Model, learning_rate=0.001):
     return model
 
 
-def train_model(
-    model: Model,
-    X: np.ndarray,
-    y: np.ndarray,
-    model_save_epoch_path,
-    batch_size=256,
-    patience=10,
-    epochs=100,
-    validation_data=None,
-    validation_split=0.3,
-    verbose=1
-) -> Tuple[Model, dict]:
+def train_model(model, X, y,
+                model_save_epoch_path,
+                batch_size=256,
+                patience=10,
+                epochs=100,
+                validation_data=None,
+                validation_split=0.3,
+                verbose=1,
+                shuffle=True):
     """
-    Trains the given Keras Model using the provided training data and parameters, and returns the trained model along with its training history.
+    Trains the given Keras Model using the provided training data and parameters,
+    and returns the trained model along with its training history.
 
     Args:
         model (Model): The Keras Model to be trained.
@@ -89,6 +85,7 @@ def train_model(
         validation_data (tuple, optional): Data on which to evaluate the loss and any model metrics at the end of each epoch. Defaults to None.
         validation_split (float, optional): The fraction of the training data to be used as validation data. Defaults to 0.3. Not used if validation data is provided.
         verbose (int, optional): Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch. Defaults to 1.
+        shuffle (bool, optional): Whether to shuffle the training data before each epoch. Defaults to True.
 
     Returns:
         Tuple[Model, dict]: The trained model and its training history.
@@ -131,25 +128,28 @@ def train_model(
         epochs=epochs,
         batch_size=batch_size,
         callbacks=[es, checkpoint, LRreducer],
-        shuffle=True,
+        shuffle=shuffle,
         verbose=verbose
     )
 
     print(f"✅ Model trained on {len(X)} rows")
-    print(history)
 
     return model, history
 
 
-def evaluate_model(
-    model: Model,
-    X: np.ndarray,
-    y: np.ndarray,
-    batch_size=64,
-    verbose=0
-) -> Tuple[Model, dict]:
+def evaluate_model(model, X, y, batch_size=64, verbose=0):
     """
     Evaluate trained model performance on the dataset
+
+    Args:
+        model (tf.keras.Model): The trained model to evaluate.
+        X (numpy.ndarray): The input data.
+        y (numpy.ndarray): The target labels.
+        batch_size (int, optional): The batch size for evaluation. Defaults to 64.
+        verbose (int, optional): Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch. Defaults to 0.
+
+    Returns:
+        dict: A dictionary containing the evaluation metrics.
     """
 
     print(Fore.BLUE +
@@ -164,12 +164,11 @@ def evaluate_model(
         y=y,
         batch_size=batch_size,
         verbose=verbose,
-        # callbacks=None,
         return_dict=True
     )
 
     accuracy = metrics["accuracy"]
 
-    print(f"✅ Model evaluated, accuracy: {round(accuracy, 2)}")
+    print(f"✅ Model evaluated, accuracy: {accuracy:.1%}")
 
     return metrics
