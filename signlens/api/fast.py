@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+import json
 
 from signlens.preprocessing.preprocess import decode_labels, pad_and_preprocess_sequence, reshape_processed_data_to_tf
 from signlens.preprocessing.data import load_landmarks_json
@@ -25,7 +26,9 @@ model, _ = load_model(model_name)
 
 app.state.model = model
 
+
 # Takes in json path
+"""
 @app.post("/predict")
 async def predict(landmarks_json_path: str):
 
@@ -36,7 +39,7 @@ async def predict(landmarks_json_path: str):
 
 
     landmarks = load_landmarks_json(landmarks_json_path)
-    data_processed = pad_and_preprocess_sequence (landmarks)
+    data_processed = pad_and_preprocess_sequence(landmarks)
     data_tf = reshape_processed_data_to_tf(data_processed)
 
     prediction = model.predict(data_tf)
@@ -47,7 +50,35 @@ async def predict(landmarks_json_path: str):
     proba = float(proba[0])
 
     return {'Word:': word, 'Probability:': proba}
+"""
 
+# Takes in a JSON file
+@app.post("/predict")
+async def upload_file(file: UploadFile = File(...)):
+
+    model = app.state.model
+
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+
+    json_data = await file.read()
+    json_text = json_data.decode('utf-8')
+    json_object = json.loads(json_text)
+    json_df = pd.DataFrame(json_object)
+
+    landmarks = load_landmarks_json(json_df)
+    data_processed = pad_and_preprocess_sequence(landmarks)
+    data_tf = reshape_processed_data_to_tf(data_processed)
+
+    prediction = model.predict(data_tf)
+
+    word, proba = decode_labels(prediction)
+
+    word = str(word[0])
+    proba = float(proba[0])
+
+    return {'Word:': word, 'Probability:': proba}
 
 @app.get("/")
 def root():
