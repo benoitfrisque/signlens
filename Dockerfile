@@ -8,12 +8,12 @@ RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 COPY signlens signlens
+COPY utils utils
 COPY setup.py setup.py
 
-COPY utils utils
-
-COPY models_api models_api
-
 RUN pip install .
+
+COPY processed_data/glossary.csv processed_data/glossary.csv
+COPY models_api models_api
 
 CMD uvicorn signlens.api.fast:app --host 0.0.0.0 --port 8000

@@ -20,3 +20,4 @@ ipdb
 uvicorn
 screeninfo
 ipywidgets
+python-multipart

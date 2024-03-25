@@ -1,8 +1,8 @@
+import os
+import json
 import pandas as pd
-import numpy as np
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import json
 
 from signlens.preprocessing.preprocess import decode_labels, pad_and_preprocess_sequence, reshape_processed_data_to_tf
 from signlens.preprocessing.data import load_landmarks_json
@@ -20,35 +20,12 @@ app.add_middleware(
 )
 
 # Load model
-# Model: model_20240322-173411
-model_path = "models_api/model_v1_250signs.keras"
+model_file = "model_v1_250signs.keras"
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+model_path = os.path.join(root_dir, 'models_api', model_file)
 model = load_model(mode='from_path', model_path=model_path)
 
 app.state.model = model
-
-# Takes in JSON path
-"""
-@app.post("/predict")
-async def predict(landmarks_json_path: str):
-
-    model = app.state.model
-
-    if not landmarks_json_path:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    landmarks = load_landmarks_json(landmarks_json_path)
-    data_processed = pad_and_preprocess_sequence(landmarks)
-    data_tf = reshape_processed_data_to_tf(data_processed)
-
-    prediction = model.predict(data_tf)
-
-    word, proba = decode_labels(prediction)
-
-    word = str(word[0])
-    proba = float(proba[0])
-
-    return {'Word:': word, 'Probability:': proba}
-"""
 
 # Takes in a JSON file
 @app.post("/predict")
@@ -58,7 +35,6 @@ async def upload_file(file: UploadFile = File(...)):
 
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
-
 
     json_data = await file.read()
     json_text = json_data.decode('utf-8')
@@ -71,17 +47,17 @@ async def upload_file(file: UploadFile = File(...)):
 
     prediction = model.predict(data_tf)
 
-    word, proba = decode_labels(prediction)
+    pred, proba = decode_labels(prediction)
 
-    word = str(word[0])
+    pred = str(pred[0])
     proba = float(proba[0])
 
-    return {'Word:': word, 'Probability:': proba}
+    return {'sign:': pred, 'probability:': proba}
 
 @app.get("/")
 def root():
 
-    return {"Welcome to FastAPI"}
+    return {"Welcome to SignLens"}
 
 # Run --> uvicorn signlens.api.fast:app --reload
 # Test JSON file: /Users/max/code/benoitfrisque/signlens/processed_data/07070_landmarks.json

@@ -54,8 +54,11 @@ run_api:
 	uvicorn signlens.api.fast:app --reload
 
 run_docker:
-	docker run \
+	docker run -it \
 	-e NUM_CLASSES=250 \
 	-e MAX_SEQ_LEN=100 \
 	-e DATA_FRAC=1 \
-	-e PORT=8000 -p 8080:8000 maxgrieb
+	-e PORT=8000 -p 8080:8000 signlensapp-dev
+
+build_docker:
+	docker build -t signlensapp-dev .
