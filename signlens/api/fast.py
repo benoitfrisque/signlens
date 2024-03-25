@@ -21,7 +21,7 @@ app.add_middleware(
 
 # Load model
 # Model: model_20240322-173411
-model_path = "/Users/max/code/benoitfrisque/signlens/training_outputs/model 20240322-173411/model/model_20240322-174546.keras"
+model_path = "models_api/model_v1_250signs.keras"
 model = load_model(mode='from_path', model_path=model_path)
 
 app.state.model = model
