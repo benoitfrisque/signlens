@@ -38,6 +38,20 @@ async def predict(landmarks_json_path: str):
         raise HTTPException(status_code=400, detail="No file provided")
 
 
+    processed_data = preprocess_and_pad_sequences_from_pq_list(pd.Series([pq_path]))
+
+    prediction = model.predict([processed_data])
+
+    word, proba = decode_labels(prediction)
+
+    return word
+
+
+@app.get("/")
+def root():
+
+    return {"API is working"}
+
     landmarks = load_landmarks_json(landmarks_json_path)
     data_processed = pad_and_preprocess_sequence(landmarks)
     data_tf = reshape_processed_data_to_tf(data_processed)

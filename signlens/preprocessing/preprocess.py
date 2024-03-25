@@ -1,7 +1,7 @@
-from json import load
 import numpy as np
 import multiprocessing as mp
 import tensorflow as tf
+from tqdm import tqdm
 from colorama import Fore, Style
 
 from signlens.params import *
@@ -19,9 +19,10 @@ def pad_and_preprocess_sequence(sequence, n_frames=MAX_SEQ_LEN):
     # Replace nan values with MASK_VALUE
     sequence[np.isnan(sequence)] = MASK_VALUE
 
+    # Pad with MASK_VALUE or cut off the sequence
     if len(sequence) < n_frames:
         pad_width = int(n_frames - len(sequence))
-        sequence = np.pad(sequence, ((0, pad_width), (0, 0),(0, 0)), mode='constant')
+        sequence = np.pad(sequence, pad_width=((0, pad_width), (0, 0), (0, 0)), mode='constant', constant_values=MASK_VALUE)
     else:
         # TO DO: check if sign is at beginning, middle or end
         sequence = sequence[:n_frames]
@@ -29,7 +30,7 @@ def pad_and_preprocess_sequence(sequence, n_frames=MAX_SEQ_LEN):
     return sequence
 
 
-def load_pad_preprocess_pq(pq_file_path):
+def load_pad_preprocess_pq(pq_file_path, n_frames=MAX_SEQ_LEN):
     """
     Load data from a parquet file, pad and preprocess the sequence.
 
@@ -43,12 +44,12 @@ def load_pad_preprocess_pq(pq_file_path):
     load_data = load_relevant_data_subset(pq_file_path)
 
     # Pad the sequence
-    data_processed = pad_and_preprocess_sequence(load_data)
+    data_processed = pad_and_preprocess_sequence(load_data, n_frames=n_frames)
 
     # Reshape the data into a 1D array and return it
     return data_processed.reshape(-1)
 
-def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
+def preprocess_and_pad_sequences_from_pq_list(pq_file_path_df, n_frames=MAX_SEQ_LEN):
     """
     Load data from multiple files, pad the sequences, and group them into a single array.
     If an error occurs during multiprocessing, falls back to sequential processing.
@@ -67,14 +68,16 @@ def group_pad_sequences(pq_file_path_df, n_frames=MAX_SEQ_LEN):
     try:
         # Create a pool of worker processes
         with mp.Pool(mp.cpu_count()) as pool:
-            # Use the pool to apply `load_and_pad` to each file path in `df` in parallel
-            data_processed = pool.map(load_pad_preprocess_pq, pq_file_path_df)
+            # Wrap the iterable with tqdm to add a progress bar
+            data_processed = list(tqdm(pool.imap(load_pad_preprocess_pq, pq_file_path_df), total=len(pq_file_path_df)))
+
+
     except Exception as e:
         print(f"An error occurred with multiprocessing: {e}")
         print("Falling back to sequential processing...")
 
         # Fallback to sequential processing
-        data_processed = [load_pad_preprocess_pq(pq_file_path) for pq_file_path in pq_file_path_df]
+        data_processed = [load_pad_preprocess_pq(pq_file_path, n_frames=n_frames) for pq_file_path in pq_file_path_df]
 
     data_processed = np.array(data_processed)
     data_tf = reshape_processed_data_to_tf(data_processed)
