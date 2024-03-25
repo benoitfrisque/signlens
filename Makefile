@@ -58,7 +58,26 @@ run_docker:
 	-e NUM_CLASSES=250 \
 	-e MAX_SEQ_LEN=100 \
 	-e DATA_FRAC=1 \
-	-e PORT=8000 -p 8080:8000 signlensapp-dev
+	-e PORT=8000 -p 8000:8000 ${GAR_IMAGE}:dev
+
+run_docker_prod:
+	docker run -it \
+	-e NUM_CLASSES=250 \
+	-e MAX_SEQ_LEN=100 \
+	-e DATA_FRAC=1 \
+	-e PORT=8000 -p 8000:8000 ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod
 
 build_docker:
-	docker build -t signlensapp-dev .
+	docker build -t ${GAR_IMAGE}:dev .
+
+build_docker_prod:
+	docker build -t ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod .
+
+
+google_configure:
+	gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev
+	gcloud artifacts repositories create signlens --repository-format=docker \
+--location=${GCP_REGION} --description="Repository for Signlens - sign language classification"
+
+google_push:
+	docker push ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod
