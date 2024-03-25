@@ -111,7 +111,7 @@ def load_model(model_name_folder=None) -> keras.Model:
 
     most_recent_model_path_on_disk = sorted(local_model_paths, key=os.path.getctime)[-1]
 
-    print(Fore.BLUE + f"\nLoad latest model from disk..." + Style.RESET_ALL)
+    print(Fore.BLUE + f"\nLoad latest model from disk...{most_recent_model_path_on_disk}" + Style.RESET_ALL)
 
     keras_files = glob.glob(os.path.join(most_recent_model_path_on_disk,'model', "*.keras"))[0]
 
