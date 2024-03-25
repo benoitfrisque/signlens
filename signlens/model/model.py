@@ -27,7 +27,7 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_
     model = Sequential()
 
     model.add(Input(shape=(n_frames, n_landmarks * 3)))
-    model.add(Masking(mask_value=0.0))
+    model.add(Masking(mask_value=MASK_VALUE))
 
     model.add(SimpleRNN(units=128, return_sequences=True))
     model.add(Dropout(0.5))
