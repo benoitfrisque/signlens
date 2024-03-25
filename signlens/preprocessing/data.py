@@ -42,6 +42,9 @@ def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=
     print(Fore.BLUE +
           f"Loading data subset from {os.path.basename(csv_path)}" + Style.RESET_ALL)
 
+    if random_state is not None:
+        print(f"    ℹ️ Random state set for data loading : {random_state}")
+
     train = pd.read_csv(csv_path)  # load the specified document
 
     total_size = len(train)  # total size
@@ -336,8 +339,9 @@ def unique_train_test_split(force_rewrite=False):
 
     all_data = load_data_subset_csv(frac=1, noface=False, balanced=False,
                                     n_classes=250, n_frames=None, random_state=42, csv_path=TRAIN_CSV_PATH)
-    train_data = all_data[~all_data['sequence_id'].isin(
-        test_data['sequence_id'])]
+
+    # take the difference between the two sets
+    train_data = all_data[~all_data['sequence_id'].isin(test_data['sequence_id'])]
 
     total_len = len(all_data)
     train_len = len(train_data)

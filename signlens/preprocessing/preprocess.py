@@ -1,7 +1,7 @@
-from json import load
 import numpy as np
 import multiprocessing as mp
 import tensorflow as tf
+from tqdm import tqdm
 from colorama import Fore, Style
 
 from signlens.params import *
@@ -68,8 +68,10 @@ def preprocess_and_pad_sequences_from_pq_list(pq_file_path_df, n_frames=MAX_SEQ_
     try:
         # Create a pool of worker processes
         with mp.Pool(mp.cpu_count()) as pool:
-            # Use the pool to apply `load_and_pad` to each file path in `df` in parallel
-            data_processed = pool.map(load_pad_preprocess_pq, pq_file_path_df)
+            # Wrap the iterable with tqdm to add a progress bar
+            data_processed = list(tqdm(pool.imap(load_pad_preprocess_pq, pq_file_path_df), total=len(pq_file_path_df)))
+
+
     except Exception as e:
         print(f"An error occurred with multiprocessing: {e}")
         print("Falling back to sequential processing...")
