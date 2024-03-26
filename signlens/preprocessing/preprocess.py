@@ -100,7 +100,7 @@ def reshape_processed_data_to_tf(data_processed):
     if data_processed.ndim == 3:
         data_processed = np.expand_dims(data_processed, axis=0) # expand dim batch_size
 
-    data_reshaped = np.array([item.reshape(MAX_SEQ_LEN, N_LANDMARKS_NO_FACE * 3) for item in data_processed])
+    data_reshaped = np.array([item.reshape(MAX_SEQ_LEN, (N_LANDMARKS_NO_FACE- (N_LANDMARKS_MAX_POSE_TO_TAKE_OFF-N_LANDMARKS_MIN_POSE_TO_TAKE_OFF+1)) * 3) for item in data_processed])
     data_tf = tf.convert_to_tensor(data_reshaped)
 
     return data_tf

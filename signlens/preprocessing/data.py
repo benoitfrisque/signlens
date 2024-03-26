@@ -391,18 +391,18 @@ def load_relevant_data_subset(pq_path, noface=True):
         #data = data[data['type'] != 'face']
         # N_LANDMARKS_NOFACE 75
 
-        frame_rows = N_LANDMARKS_NO_FACE - 8
+        frame_rows = N_LANDMARKS_NO_FACE - (N_LANDMARKS_MAX_POSE_TO_TAKE_OFF-N_LANDMARKS_MIN_POSE_TO_TAKE_OFF+1)
 
 
     else:
         frame_rows = N_LANDMARKS_ALL
 
     data = data.drop(columns=['type',"landmark_index"])
-    data_columns = data_columns[:-1]
-    print(data)
+    data_columns = data_columns[:-2]
 
     n_frames = int(len(data) / frame_rows)
     n_dim = len(data_columns)
+
     data = data.values.reshape(n_frames, frame_rows, n_dim)
 
     return data.astype(np.float32)
@@ -505,6 +505,8 @@ def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_colum
     Returns:
         DataFrame: DataFrame containing filtered landmarks.
     """
+    if isinstance(landmark_types_to_remove, str):
+        landmark_types_to_remove = [landmark_types_to_remove]
 
     if data_columns is None:
         landmarks = pd.read_parquet(parquet_file_path)
@@ -512,11 +514,12 @@ def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_colum
         landmarks = pd.read_parquet(parquet_file_path, columns=data_columns)
 
     filtered_landmarks = landmarks.copy()
-    print("landmark_types_to_remove",landmark_types_to_remove)
-    print(landmark_types_to_remove=="pose")
-    if landmark_types_to_remove=="pose":
+    if "pose" in landmark_types_to_remove:
         for landmark_type in landmark_types_to_remove:
-            filtered_landmarks = landmarks[(landmarks['type'] == 'pose') & (~landmarks['landmark_index'].between(25, 32))]
+            filtered_landmarks = landmarks[
+             ~((landmarks['type'] == 'pose') &
+            (landmarks['landmark_index'].between(N_LANDMARKS_MIN_POSE_TO_TAKE_OFF, N_LANDMARKS_MAX_POSE_TO_TAKE_OFF)))
+            ]
     else:
         for landmark_type in landmark_types_to_remove:
             filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
