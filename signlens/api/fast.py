@@ -1,7 +1,7 @@
 import os
 import json
 import pandas as pd
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from signlens.preprocessing.preprocess import decode_labels, pad_and_preprocess_sequence, reshape_processed_data_to_tf
@@ -28,7 +28,7 @@ model = load_model(mode='from_path', model_path=model_path)
 app.state.model = model
 
 # Takes in a JSON file
-@app.post("/predict")
+@app.post("/predict_file")
 async def upload_file(file: UploadFile = File(...)):
 
     model = app.state.model
@@ -53,6 +53,30 @@ async def upload_file(file: UploadFile = File(...)):
     proba = float(proba[0])
 
     return {'sign:': pred, 'probability:': proba}
+
+@app.post("/predict")
+async def predict(request: Request):
+    data = await request.json()
+
+    model = app.state.model
+
+    if not data:
+        raise HTTPException(status_code=400, detail="No data provided")
+
+    json_df = pd.DataFrame(data)
+
+    landmarks = load_landmarks_json(json_df)
+    data_processed = pad_and_preprocess_sequence(landmarks)
+    data_tf = reshape_processed_data_to_tf(data_processed)
+
+    prediction = model.predict(data_tf)
+
+    word, proba = decode_labels(prediction)
+
+    word = str(word[0])
+    proba = float(proba[0])
+
+    return {'Word:': word, 'Probability:': proba}
 
 @app.get("/")
 def root():
