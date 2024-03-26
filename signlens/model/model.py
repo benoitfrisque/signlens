@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import TimeDistributed, LSTM, Dense, Masking, Flatten, Dropout, SimpleRNN, Reshape, Bidirectional, Input
+from tensorflow.keras.layers import TimeDistributed, LSTM, Dense, Masking, Flatten, Dropout, SimpleRNN, Reshape, Bidirectional, Input, Conv1D, MaxPooling1D
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 from typing import Tuple
@@ -25,21 +25,23 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_
     model = Sequential()
 
     model.add(Input(shape=(n_frames, n_landmarks * 3)))
+
+
     model.add(Masking(mask_value=MASK_VALUE))
 
 
     model.add(LSTM(units=256, return_sequences=True))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.2))
     model.add(LSTM(units=256, return_sequences=True))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.2))
 
 
     model.add(LSTM(units=256))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.2))
 
 
     model.add(Dense(512, activation='relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.2))
     model.add(Dense(num_classes, activation='softmax'))  # output layer
 
     return model
@@ -104,7 +106,7 @@ def train_model(model, X, y,
             return None
 
     es = EarlyStopping(
-        monitor="val_loss",
+        monitor="val_accuracy",
         patience=patience,
         restore_best_weights=True,
         verbose=1

@@ -378,24 +378,28 @@ def load_relevant_data_subset(pq_path, noface=True):
     Returns:
         NumPy array: NumPy array containing filtered landmarks.
     '''
-    data_columns = ['x', 'y', 'z', 'type']  # Include the 'type' column
+    data_columns = ['x', 'y', 'z', 'type','landmark_index']  # Include the 'type' column
 
     data = pd.read_parquet(pq_path, columns=data_columns)
 
     if noface:
-        # Exclude rows where 'type' is 'face'
+        # Exclude rows where 'type' is 'face' and some portion of 'pose'
         data = filter_out_landmarks(pq_path, landmark_types_to_remove=[
-                                    'face'], data_columns=data_columns)
+                                    'face','pose'], data_columns=data_columns)
 
-        data = data[data['type'] != 'face']
+
+        #data = data[data['type'] != 'face']
         # N_LANDMARKS_NOFACE 75
-        frame_rows = N_LANDMARKS_NO_FACE
+
+        frame_rows = N_LANDMARKS_NO_FACE - 8
+
 
     else:
         frame_rows = N_LANDMARKS_ALL
 
-    data = data.drop(columns=['type'])
+    data = data.drop(columns=['type',"landmark_index"])
     data_columns = data_columns[:-1]
+    print(data)
 
     n_frames = int(len(data) / frame_rows)
     n_dim = len(data_columns)
@@ -501,15 +505,21 @@ def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_colum
     Returns:
         DataFrame: DataFrame containing filtered landmarks.
     """
+
     if data_columns is None:
         landmarks = pd.read_parquet(parquet_file_path)
     else:
         landmarks = pd.read_parquet(parquet_file_path, columns=data_columns)
 
     filtered_landmarks = landmarks.copy()
-
-    for landmark_type in landmark_types_to_remove:
-        filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
+    print("landmark_types_to_remove",landmark_types_to_remove)
+    print(landmark_types_to_remove=="pose")
+    if landmark_types_to_remove=="pose":
+        for landmark_type in landmark_types_to_remove:
+            filtered_landmarks = landmarks[(landmarks['type'] == 'pose') & (~landmarks['landmark_index'].between(25, 32))]
+    else:
+        for landmark_type in landmark_types_to_remove:
+            filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
 
     return filtered_landmarks
 

@@ -13,6 +13,7 @@ MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN"))
 # Percentage of the data to load
 DATA_FRAC = float(os.environ.get("DATA_FRAC"))
 
+EPOCHS= int(os.environ.get("EPOCHS"))
 MASK_VALUE = 0
 
 ##################  CONSTANTS  #####################
