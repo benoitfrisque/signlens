@@ -95,7 +95,7 @@ def load_relevant_data_subset_from_pq(pq_path, noface=True, n_coordinates=N_DIME
         pandas.DataFrame: The loaded relevant data subset.
     """
 
-    landmarks_df = pd.read_parquet(pq_path, columns=['type', 'landmark_index', 'x', 'y', 'z'])
+    landmarks_df = pd.read_parquet(pq_path, columns=['frame', 'type', 'landmark_index', 'x', 'y', 'z'])
 
     landmarks_array_filtered = filter_relevant_landmarks_and_coordinates(landmarks_df, noface=noface, n_coordinates=n_coordinates)
 
@@ -195,9 +195,17 @@ def filter_relevant_landmarks_and_coordinates(landmarks_df, noface=True, n_coord
     Returns:
         np.ndarray: NumPy array containing filtered landmarks.
     '''
-
     # Keep only the defined columns
-    landmarks_df = landmarks_df[['type','landmark_index', 'x', 'y', 'z']]
+    landmarks_df = landmarks_df[['frame', 'type','landmark_index', 'x', 'y', 'z']]
+
+    # Define the order of the 'type' column
+    type_order = ['face', 'pose', 'left_hand', 'right_hand']
+
+    # Convert the 'type' column to a categorical type with the specified order
+    landmarks_df['type'] = pd.Categorical(landmarks_df['type'], categories=type_order, ordered=True)
+
+    # Sort the DataFrame by 'frame', 'type' and 'landmark_index', to ensure the correct order of landmarks
+    landmarks_df.sort_values(by=['frame', 'type', 'landmark_index'], inplace=True)
 
     n_landmarks_per_frame = N_LANDMARKS_ALL
 
@@ -232,7 +240,7 @@ def filter_relevant_landmarks_and_coordinates(landmarks_df, noface=True, n_coord
         # If the model uses 3D data, keep the 'z' dimension
         data_columns = ['x', 'y', 'z']
 
-    landmarks_df = landmarks_df[data_columns]
+    landmarks_df = landmarks_df[data_columns].reset_index(drop=True)
 
     # Calculate the number of frames and dimensions
     n_frames = int(len(landmarks_df) / n_landmarks_per_frame)
