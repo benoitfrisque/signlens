@@ -56,6 +56,7 @@ def pad_and_preprocess_sequences_from_pq_file_path_df(pq_file_path_df, n_frames=
 
     data_processed = np.array(data_processed)
     data_tf = reshape_processed_data_to_tf(data_processed, noface=noface, n_frames=n_frames)
+
     return data_tf
 
 
@@ -77,7 +78,9 @@ def load_pad_preprocess_pq(pq_file_path, n_frames=MAX_SEQ_LEN, noface=True):
     data_processed = pad_and_preprocess_landmarks_array(landmarks_array, n_frames=n_frames)
 
     # Reshape the data into a 1D array and return it
-    return data_processed.reshape(-1)
+    # return data_processed.reshape(-1)
+
+    return data_processed
 
 
 def load_relevant_data_subset_from_pq(pq_path, noface=True):
@@ -107,7 +110,7 @@ def filter_relevant_data_subset(landmarks_df, noface=True, n_coordinates=N_DIMEN
     Args:
         landmarks_df (DataFrame): Input DataFrame containing landmarks data.
         noface (bool): If True, excludes landmarks of type 'face'.
-        n_coordinates (int): Number of dimensions to use for the model.
+        n_coordinates (int): Number of coordintates (x,y,z) to use for the model.
 
     Returns:
         np.ndarray: NumPy array containing filtered landmarks.
@@ -217,20 +220,37 @@ def reshape_processed_data_to_tf(data_processed, noface=True, n_frames=MAX_SEQ_L
     Returns:
     - tf.Tensor: Reshaped data as a TensorFlow tensor.
     """
-    # case where we provide a single input
+    # Case where we provide a single bacth item
     if data_processed.ndim == 3:
         data_processed = np.expand_dims(data_processed, axis=0) # expand dim batch_size
 
+    elif data_processed.ndim != 4:
+        raise ValueError(f"Data should have 3 or 4 dimensions, but has {data_processed.ndim}.")
+
+    # Compute number of landmarks per frame
     n_landmarks = N_LANDMARKS_ALL
     if noface:
         n_landmarks -= N_LANDMARKS_FACE
     if N_LANDMARKS_POSE_TO_TAKE_OFF > 0:
         n_landmarks -= N_LANDMARKS_POSE_TO_TAKE_OFF
 
-    data_reshaped = np.array([item.reshape(n_frames, n_landmarks * n_coordinates) for item in data_processed])
+    if n_frames != data_processed.shape[1]:
+        raise ValueError(f"Number of frames ({n_frames}) does not match the number of rows in the data ({data_processed.shape[1]})")
+
+    if n_landmarks != data_processed.shape[2]:
+        raise ValueError(f"Number of landmarks ({n_landmarks}) does not match the number of columns in the data ({data_processed.shape[2]})")
+
+    if n_coordinates != data_processed.shape[3]:
+        raise ValueError(f"Number of coordinates ({n_coordinates}) does not match the number of columns in the data ({data_processed.shape[3]})")
+
+    # Flatten the 2 last dimensions
+    data_reshaped = np.reshape(data_processed , (-1, n_frames, n_landmarks * n_coordinates))
+
+    # Convert to TensorFlow tensor (fatser to reshape to numpy array first and then convert to tensor)
     data_tf = tf.convert_to_tensor(data_reshaped)
 
     return data_tf
+
 
 ################################################################################
 # Label encoding and decoding
