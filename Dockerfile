@@ -4,8 +4,16 @@ WORKDIR /signlens
 
 COPY requirements_api.txt requirements.txt
 
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apt-get purge -y --auto-remove build-essential libpq-dev
 
 COPY signlens signlens
 COPY utils utils
