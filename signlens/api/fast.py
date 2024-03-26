@@ -24,8 +24,6 @@ root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 model_path = os.path.join(root_dir, 'models_api', model_file)
 app.state.model = load_model(mode='from_path', model_path=model_path)
 
-# Takes in a JSON file
-
 
 @app.post("/predict_file")
 async def upload_file(file: UploadFile = File(...)):
