@@ -1,9 +1,10 @@
 import numpy as np
+import pandas as pd
 import multiprocessing as mp
 import tensorflow as tf
+import json
 from tqdm import tqdm
 from colorama import Fore, Style
-import pandas as pd
 
 from signlens.params import *
 from signlens.preprocessing.data import load_glossary
@@ -15,8 +16,7 @@ from signlens.preprocessing.data import load_glossary
 #     └── load_pad_preprocess_pq
 #         ├── load_relevant_data_subset_from_pq
 #         │   ├── pd.read_parquet
-#         │   └── filter_relevant_data_subset
-#         │       └── filter_out_landmarks
+#         │   └── filter_relevant_landmarks_and_coordinates
 #         └── pad_and_preprocess_landmarks_array
 # └── reshape_processed_data_to_tf
 
@@ -106,6 +106,27 @@ def load_relevant_data_subset_from_pq(pq_path, noface=True, n_coordinates=N_DIME
 # FUNCTIONS FOR JSON FILES (FOR THE API)
 ################################################################################
 
+def preprocess_data_from_json_data(json_data, noface=True, n_coordinates=N_DIMENSIONS_FOR_MODEL, n_frames=MAX_SEQ_LEN):
+    """
+    Preprocesses the data from a JSON list.
+
+    Args:
+        json_data (dict): The JSON data to be processed.
+        noface (bool, optional): Whether to exclude face landmarks. Defaults to True.
+        n_coordinates (int, optional): The number of dimensions for the model. Defaults to N_DIMENSIONS_FOR_MODEL.
+        n_frames (int, optional): The maximum sequence length. Defaults to MAX_SEQ_LEN.
+
+    Returns:
+        tf.Tensor: The preprocessed data in TensorFlow format.
+    """
+    landmarks_df = convert_landmarks_json_data_to_df(json_data)
+    filtered_landmarks_array = filter_relevant_landmarks_and_coordinates(landmarks_df)
+    data_processed = pad_and_preprocess_landmarks_array(filtered_landmarks_array)
+    data_processed_tf = reshape_processed_data_to_tf(data_processed)
+
+    return data_processed_tf
+
+
 def load_landmarks_json_from_path(json_path):
     """
     Load landmarks data from a JSON file.
@@ -137,40 +158,24 @@ def convert_landmarks_json_data_to_df(json_data):
     # Initialize an empty list to store the converted data
     converted_data = []
 
+    # Define the keys to iterate over
+    landmark_types = ['pose', 'left_hand', 'right_hand']
+
     # Iterate over each frame in the JSON data
-    for frame in json_data:
-        # Extract pose landmarks
-        pose_landmarks = frame['pose']
-        for landmark in pose_landmarks:
-            converted_data.append({
-                'x': landmark['x'],
-                'y': landmark['y'],
-                'z': landmark['z'],
-                'type': 'pose',
-                'landmark_index': landmark['landmark_index']
-            })
-
-        # Extract left hand landmarks
-        left_hand_landmarks = frame['left_hand']
-        for landmark in left_hand_landmarks:
-            converted_data.append({
-                'x': landmark['x'],
-                'y': landmark['y'],
-                'z': landmark['z'],
-                'type': 'left_hand',
-                'landmark_index': landmark['landmark_index']
-            })
-
-        # Extract right hand landmarks
-        right_hand_landmarks = frame['right_hand']
-        for landmark in right_hand_landmarks:
-            converted_data.append({
-                'x': landmark['x'],
-                'y': landmark['y'],
-                'z': landmark['z'],
-                'type': 'right_hand',
-                'landmark_index': landmark['landmark_index']
-            })
+    for frame_index, frame in enumerate(json_data):
+        # Iterate over each key
+        for landmark_type in landmark_types:
+            # Extract landmarks
+            landmarks = frame[landmark_type]
+            for landmark in landmarks:
+                converted_data.append({
+                    'frame': frame_index,
+                    'type': landmark_type,
+                    'landmark_index': landmark['landmark_index'],
+                    'x': landmark['x'],
+                    'y': landmark['y'],
+                    'z': landmark['z'],
+                })
 
     # Create a DataFrame from the converted data
     df = pd.DataFrame(converted_data)

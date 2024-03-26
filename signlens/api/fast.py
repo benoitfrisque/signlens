@@ -4,8 +4,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from signlens.preprocessing.preprocess import decode_labels, load_relevant_data_subset_from_pq, pad_and_preprocess_landmarks_array, reshape_processed_data_to_tf
-from signlens.preprocessing.data import convert_landmarks_json_data_to_df
+from signlens.preprocessing.preprocess import preprocess_data_from_json_data, decode_labels
 from signlens.model.model_utils import load_model
 
 app = FastAPI()
@@ -34,16 +33,16 @@ async def upload_file(file: UploadFile = File(...)):
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    json = await file.read()
-    json_text = json_data.decode('utf-8')
+    # Read json data from file
+    json_file = await file.read()
+    json_text = json_file.decode('utf-8')
     json_data = json.loads(json_text)
 
-    landmarks_df = convert_landmarks_json_data_to_df(json_data)
-    landmarks_array = load_relevant_data_subset_from_l(landmarks_df)
-    data_processed = pad_and_preprocess_landmarks_array(landmarks)
-    data_tf = reshape_processed_data_to_tf(data_processed)
+    # Preprocess data for model prediction
+    data_processed_tf = preprocess_data_from_json_data(json_data)
 
-    prediction = app.state.model.predict(data_tf)
+    # Predict with loaded model
+    prediction = app.state.model.predict(data_processed_tf)
 
     pred, proba = decode_labels(prediction)
 
@@ -60,19 +59,19 @@ async def predict(request: Request):
     if not json_data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    landmarks_df = convert_landmarks_json_data_to_df(json_data)
+    # Preprocess data for model prediction
+    data_processed_tf = preprocess_data_from_json_data(json_data)
 
-    data_processed = pad_and_preprocess_landmarks_array(landmarks)
-    data_tf = reshape_processed_data_to_tf(data_processed)
+    # Predict with loaded model
+    prediction = app.state.model.predict(data_processed_tf)
 
-    prediction = app.state.model.predict(data_tf)
+    pred, proba = decode_labels(prediction)
 
-    word, proba = decode_labels(prediction)
-
-    word = str(word[0])
+    pred = str(pred[0])
     proba = float(proba[0])
 
-    return {'Word:': word, 'Probability:': proba}
+    return {'sign:': pred, 'probability:': proba}
+
 
 
 @app.get("/")
