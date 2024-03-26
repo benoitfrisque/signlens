@@ -6,7 +6,7 @@ from torch import rand
 
 from signlens.params import *
 from signlens.preprocessing.data import load_data_subset_csv, unique_train_test_split
-from signlens.preprocessing.preprocess import preprocess_and_pad_sequences_from_pq_list, encode_labels
+from signlens.preprocessing.preprocess import pad_and_preprocess_sequences_from_pq_file_path_df, encode_labels
 from signlens.model.model_architecture import initialize_model, compile_model, train_model, evaluate_model
 from signlens.model.model_utils import save_results, save_model, load_model, create_model_folder
 
@@ -24,9 +24,9 @@ def preprocess(random_state=None):
 
     # Preprocessing
     print(Fore.BLUE + f"\nPreprocessing {len(X_train_files)} training files..." + Style.RESET_ALL)
-    X_train = preprocess_and_pad_sequences_from_pq_list(X_train_files)
+    X_train = pad_and_preprocess_sequences_from_pq_file_path_df(X_train_files)
     print(Fore.BLUE + f"\nPreprocessing {len(X_val_files)} validation files..." + Style.RESET_ALL)
-    X_val = preprocess_and_pad_sequences_from_pq_list(X_val_files)
+    X_val = pad_and_preprocess_sequences_from_pq_file_path_df(X_val_files)
 
     return X_train, X_val, y_train, y_val
 
@@ -86,15 +86,12 @@ def evaluate(random_state=None, model=None, paths=None):
         model, paths = load_model(mode='most_recent', model_base_dir_pattern=model_base_dir_pattern, return_paths=True)
         assert model is not None
 
-
-
-
     test_data = load_data_subset_csv(balanced=True, csv_path=TRAIN_TEST_CSV_PATH, random_state=random_state)
     X_test_files = test_data.file_path
 
     # Preprocessing
     print(Fore.BLUE + f"\nPreprocessing {len(X_test_files)} testing files..." + Style.RESET_ALL)
-    X_test = preprocess_and_pad_sequences_from_pq_list(X_test_files)
+    X_test = pad_and_preprocess_sequences_from_pq_file_path_df(X_test_files)
     y_test = encode_labels(test_data.sign)
 
     metrics_dict = evaluate_model(model, X_test, y_test)
