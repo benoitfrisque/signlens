@@ -11,9 +11,8 @@ from signlens.params import *
 from signlens.preprocessing.glossary import load_glossary
 
 ################################################################################
-# LOAD CSV
+# LOAD CSV WITH LIST OF PARQUET FILES
 ################################################################################
-
 
 def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=NUM_CLASSES, n_frames=MAX_SEQ_LEN, random_state=None, csv_path=TRAIN_TRAIN_CSV_PATH):
     '''
@@ -365,7 +364,7 @@ def unique_train_test_split(force_rewrite=False):
           f"\nTrain and test data saved at {TRAIN_TRAIN_CSV_PATH} and {TRAIN_TEST_CSV_PATH}" + Style.RESET_ALL)
 
 ################################################################################
-# LOAD VIDEOS
+# LOAD VIDEOS (OTHER DATASET)
 ################################################################################
 
 def load_video_list_json(video_list_json_path: str = WLASL_JSON_PATH, filter_glossary: bool = True, random_seed: int = 42) -> pd.DataFrame:
@@ -410,57 +409,3 @@ def load_video_list_json(video_list_json_path: str = WLASL_JSON_PATH, filter_glo
     videos_df = videos_df.reset_index(drop=True)
 
     return videos_df
-
-################################################################################
-# LOAD LANDMARKS FROM JSON
-################################################################################
-
-def load_landmarks_json_from_path(json_path):
-    with open(json_path, 'r') as file:
-        json_data = json.load(file)
-        json_df = convert_landmarks_json_data_to_df(json_data)
-        return json_df
-
-def convert_landmarks_json_data_to_df(json_data):
-    # Initialize an empty list to store the converted data
-    converted_data = []
-
-    # Iterate over each frame in the JSON data
-    for frame in json_data:
-        # Extract pose landmarks
-        pose_landmarks = frame['pose']
-        for landmark in pose_landmarks:
-            converted_data.append({
-                'x': landmark['x'],
-                'y': landmark['y'],
-                'z': landmark['z'],
-                'type': 'pose',
-                'landmark_index': landmark['landmark_index']
-            })
-
-        # Extract left hand landmarks
-        left_hand_landmarks = frame['left_hand']
-        for landmark in left_hand_landmarks:
-            converted_data.append({
-                'x': landmark['x'],
-                'y': landmark['y'],
-                'z': landmark['z'],
-                'type': 'left_hand',
-                'landmark_index': landmark['landmark_index']
-            })
-
-        # Extract right hand landmarks
-        right_hand_landmarks = frame['right_hand']
-        for landmark in right_hand_landmarks:
-            converted_data.append({
-                'x': landmark['x'],
-                'y': landmark['y'],
-                'z': landmark['z'],
-                'type': 'right_hand',
-                'landmark_index': landmark['landmark_index']
-            })
-
-    # Create a DataFrame from the converted data
-    df = pd.DataFrame(converted_data)
-
-    return df

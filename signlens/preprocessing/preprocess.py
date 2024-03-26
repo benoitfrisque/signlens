@@ -9,10 +9,6 @@ from signlens.params import *
 from signlens.preprocessing.data import load_glossary
 
 
-################################################################################
-# Preprocessing functions
-################################################################################
-
 # STRUCTURE
 # pad_and_preprocess_sequences_from_pq_file_path_df
 # └── pool.imap
@@ -23,6 +19,10 @@ from signlens.preprocessing.data import load_glossary
 #         │       └── filter_out_landmarks
 #         └── pad_and_preprocess_landmarks_array
 # └── reshape_processed_data_to_tf
+
+################################################################################
+# FUNCTION FOR PARQUET FILES
+################################################################################
 
 def pad_and_preprocess_sequences_from_pq_file_path_df(pq_file_path_df, n_frames=MAX_SEQ_LEN, noface=True):
     """
@@ -60,49 +60,129 @@ def pad_and_preprocess_sequences_from_pq_file_path_df(pq_file_path_df, n_frames=
     return data_tf
 
 
-def load_pad_preprocess_pq(pq_file_path, n_frames=MAX_SEQ_LEN, noface=True):
+def load_pad_preprocess_pq(pq_file_path, n_frames=MAX_SEQ_LEN, noface=True, n_coordinates=N_DIMENSIONS_FOR_MODEL):
     """
     Load data from a parquet file, pad and preprocess the sequence.
 
     Parameters:
     - pq_file_path (str): Path to the parquet file.
     - n_frames (int): Number of frames to pad the sequence to. Default is MAX_SEQ_LEN.
+    - noface (bool): Flag indicating whether to exclude face landmarks. Default is True.
+    - n_coordinates (int): Number of coordinates for the model. Default is N_DIMENSIONS_FOR_MODEL.
 
     Returns:
     - numpy.ndarray: Padded data reshaped into a 1D array.
     """
     # Load data from the file
-    landmarks_array = load_relevant_data_subset_from_pq(pq_file_path, noface=noface)
+    landmarks_array = load_relevant_data_subset_from_pq(pq_file_path, noface=noface,  n_coordinates=n_coordinates)
 
     # Pad the sequence
     data_processed = pad_and_preprocess_landmarks_array(landmarks_array, n_frames=n_frames)
 
-    # Reshape the data into a 1D array and return it
-    # return data_processed.reshape(-1)
-
     return data_processed
 
 
-def load_relevant_data_subset_from_pq(pq_path, noface=True):
+def load_relevant_data_subset_from_pq(pq_path, noface=True, n_coordinates=N_DIMENSIONS_FOR_MODEL):
     """
     Load a relevant data subset from a Parquet file.
 
     Args:
         pq_path (str): The path to the Parquet file.
         noface (bool, optional): Whether to exclude data without a face. Defaults to True.
+        n_coordinates (int, optional): The number of coordinates (x, y, z) for the model. Defaults to N_DIMENSIONS_FOR_MODEL.
 
     Returns:
         pandas.DataFrame: The loaded relevant data subset.
     """
 
-    landmarks_df = pd.read_parquet(pq_path)
+    landmarks_df = pd.read_parquet(pq_path, columns=['type', 'landmark_index', 'x', 'y', 'z'])
 
-    landmarks_array_filtered = filter_relevant_data_subset(landmarks_df, noface=noface)
+    landmarks_array_filtered = filter_relevant_landmarks_and_coordinates(landmarks_df, noface=noface, n_coordinates=n_coordinates)
 
     return landmarks_array_filtered
 
 
-def filter_relevant_data_subset(landmarks_df, noface=True, n_coordinates=N_DIMENSIONS_FOR_MODEL):
+################################################################################
+# FUNCTIONS FOR JSON FILES (FOR THE API)
+################################################################################
+
+def load_landmarks_json_from_path(json_path):
+    """
+    Load landmarks data from a JSON file.
+
+    Args:
+        json_path (str): The path to the JSON file.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the loaded landmarks data.
+    """
+    with open(json_path, 'r') as file:
+        json_data = json.load(file)
+        json_df = convert_landmarks_json_data_to_df(json_data)
+
+        return json_df
+
+
+def convert_landmarks_json_data_to_df(json_data):
+    """
+    Convert landmarks JSON data to a DataFrame.
+
+    Args:
+        json_data (list): A list of JSON objects containing landmarks data.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the converted landmarks data.
+
+    """
+    # Initialize an empty list to store the converted data
+    converted_data = []
+
+    # Iterate over each frame in the JSON data
+    for frame in json_data:
+        # Extract pose landmarks
+        pose_landmarks = frame['pose']
+        for landmark in pose_landmarks:
+            converted_data.append({
+                'x': landmark['x'],
+                'y': landmark['y'],
+                'z': landmark['z'],
+                'type': 'pose',
+                'landmark_index': landmark['landmark_index']
+            })
+
+        # Extract left hand landmarks
+        left_hand_landmarks = frame['left_hand']
+        for landmark in left_hand_landmarks:
+            converted_data.append({
+                'x': landmark['x'],
+                'y': landmark['y'],
+                'z': landmark['z'],
+                'type': 'left_hand',
+                'landmark_index': landmark['landmark_index']
+            })
+
+        # Extract right hand landmarks
+        right_hand_landmarks = frame['right_hand']
+        for landmark in right_hand_landmarks:
+            converted_data.append({
+                'x': landmark['x'],
+                'y': landmark['y'],
+                'z': landmark['z'],
+                'type': 'right_hand',
+                'landmark_index': landmark['landmark_index']
+            })
+
+    # Create a DataFrame from the converted data
+    df = pd.DataFrame(converted_data)
+
+    return df
+
+
+################################################################################
+# PREPROCESSING FUNCTIONS
+################################################################################
+
+def filter_relevant_landmarks_and_coordinates(landmarks_df, noface=True, n_coordinates=N_DIMENSIONS_FOR_MODEL):
     '''
     Loads the relevant data from the input DataFrame.
     If noface is set to True, it excludes landmarks of type 'face'.
@@ -121,18 +201,29 @@ def filter_relevant_data_subset(landmarks_df, noface=True, n_coordinates=N_DIMEN
 
     n_landmarks_per_frame = N_LANDMARKS_ALL
 
+    landmark_types_to_remove = []
+
     if noface:
         # Exclude rows where 'type' is 'face' and some portion of 'pose'
-        landmarks_df = filter_out_landmarks(landmarks_df, landmark_types_to_remove=['face'])
+        landmark_types_to_remove.append('face')
 
         # Calculate the number of rows per frame after removing 'face' landmarks
         n_landmarks_per_frame -= N_LANDMARKS_FACE
 
     if N_LANDMARKS_POSE_TO_TAKE_OFF > 0:
-        landmarks_df = filter_out_landmarks(landmarks_df, landmark_types_to_remove=['pose'])
+        landmark_types_to_remove.append('pose')
 
         # Calculate the number of rows per frame after removing 'pose' landmarks
         n_landmarks_per_frame -= N_LANDMARKS_POSE_TO_TAKE_OFF
+
+    for landmark_type in landmark_types_to_remove:
+        if landmark_type == 'pose' and N_LANDMARKS_POSE_TO_TAKE_OFF > 0:
+            landmarks_df = landmarks_df[~((landmarks_df['type'] == 'pose') &
+                                          (landmarks_df['landmark_index'].\
+                                              between(N_LANDMARKS_MIN_POSE_TO_TAKE_OFF, N_LANDMARKS_MAX_POSE_TO_TAKE_OFF)))
+                                        ]
+        else:
+            landmarks_df = landmarks_df[landmarks_df['type'] != landmark_type]
 
     # If the model uses 2D data, drop the 'z' dimension
     if n_coordinates == 2:
@@ -153,35 +244,6 @@ def filter_relevant_data_subset(landmarks_df, noface=True, n_coordinates=N_DIMEN
     landmarks_array = landmarks_array.astype(np.float32)
 
     return landmarks_array
-
-
-def filter_out_landmarks(landmarks_df, landmark_types_to_remove):
-    """
-    Filters out specific landmark types from a DataFrame containing landmarks. For pose, it uses the global variables.
-
-    Args:
-        landmarks_df (DataFrame): DataFrame containing landmarks.
-        landmark_types_to_remove (list of str): List of landmark types to be removed.
-
-    Returns:
-        DataFrame: DataFrame containing filtered landmarks.
-    """
-    if isinstance(landmark_types_to_remove, str):
-        landmark_types_to_remove = [landmark_types_to_remove]
-
-    if "pose" in landmark_types_to_remove and N_LANDMARKS_POSE_TO_TAKE_OFF > 0:
-
-        for landmark_type in landmark_types_to_remove:
-            if landmark_type == 'pose':
-                landmarks_df = landmarks_df[~((landmarks_df['type'] == 'pose') &
-                                              (landmarks_df['landmark_index'].\
-                                                  between(N_LANDMARKS_MIN_POSE_TO_TAKE_OFF, N_LANDMARKS_MAX_POSE_TO_TAKE_OFF)))
-                                            ]
-            else:
-                landmarks_df = landmarks_df[landmarks_df['type'] != landmark_type]
-
-    return landmarks_df
-
 
 def pad_and_preprocess_landmarks_array(landmarks_array, n_frames=MAX_SEQ_LEN, padding_value=MASK_VALUE):
     '''
@@ -310,7 +372,7 @@ def decode_labels(y_encoded):
 
 
 ################################################################################
-# Functions used for plotting only
+# FUNCTIONS USED FOR PLOTTING ONLY
 ################################################################################
 
 def load_relevant_data_subset_per_landmark_type(pq_path):
