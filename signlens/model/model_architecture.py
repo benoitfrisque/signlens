@@ -28,10 +28,6 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE-N_LAN
     model.add(Masking(mask_value=MASK_VALUE))
     model.add(LSTM(units=256, return_sequences=True))
     model.add(Dropout(0.2))
-    model.add(Conv1D(filters=64, kernel_size=3, activation='relu', padding='same'))
-    model.add(MaxPooling1D(pool_size=2))
-    model.add(Conv1D(filters=128, kernel_size=3, activation='relu', padding='same'))
-    model.add(MaxPooling1D(pool_size=2))
 
 
 
