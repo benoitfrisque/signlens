@@ -73,6 +73,9 @@ build_docker:
 build_docker_prod:
 	docker build -t ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod .
 
+build_docker_prod_mac:
+	docker build --platform linux/amd64 -t ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod .
+
 
 google_configure:
 	gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev
@@ -81,3 +84,6 @@ google_configure:
 
 google_push:
 	docker push ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod
+
+google_deploy:
+	gcloud run deploy signlens --image ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod --memory ${GAR_MEMORY} --region ${GCP_REGION} --env-vars-file .env.yaml

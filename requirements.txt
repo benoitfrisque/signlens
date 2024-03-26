@@ -1,23 +1,22 @@
 colorama
 direnv
+fastapi
 fastparquet
+ipywidgets
 matplotlib
 mediapipe
 numpy
 opencv-python
 pandas
 pyarrow
+python-multipart
 scikit-learn
 scipy
+screeninfo
 seaborn
 tensorflow; sys_platform == 'darwin' and 'ARM' not in platform_version # Mac Intel chips
 tensorflow; sys_platform == 'win32' or 'linux' in sys_platform # Windows and Linux
 tensorflow-macos; sys_platform == 'darwin' and 'ARM' in platform_version # Mac M-chips
 tqdm
 typing
-fastapi
-ipdb
 uvicorn
-screeninfo
-ipywidgets
-python-multipart
