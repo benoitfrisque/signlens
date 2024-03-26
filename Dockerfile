@@ -1,4 +1,4 @@
-FROM python:3.10.6-buster
+FROM tensorflow/tensorflow
 
 WORKDIR /signlens
 
@@ -16,7 +16,6 @@ RUN --mount=type=cache,target=/var/cache/apt \
     apt-get purge -y --auto-remove build-essential libpq-dev
 
 COPY signlens signlens
-COPY utils utils
 COPY setup.py setup.py
 
 RUN pip install .
