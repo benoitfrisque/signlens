@@ -19,15 +19,14 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-
 # Load model
-model_name = "model 20240322-173411"
-model, _ = load_model(model_name)
+# Model: model_20240322-173411
+model_path = "/Users/max/code/benoitfrisque/signlens/training_outputs/model 20240322-173411/model/model_20240322-174546.keras"
+model = load_model(mode='from_path', model_path=model_path)
 
 app.state.model = model
 
-
-# Takes in json path
+# Takes in JSON path
 """
 @app.post("/predict")
 async def predict(landmarks_json_path: str):
@@ -36,21 +35,6 @@ async def predict(landmarks_json_path: str):
 
     if not landmarks_json_path:
         raise HTTPException(status_code=400, detail="No file provided")
-
-
-    processed_data = preprocess_and_pad_sequences_from_pq_list(pd.Series([pq_path]))
-
-    prediction = model.predict([processed_data])
-
-    word, proba = decode_labels(prediction)
-
-    return word
-
-
-@app.get("/")
-def root():
-
-    return {"API is working"}
 
     landmarks = load_landmarks_json(landmarks_json_path)
     data_processed = pad_and_preprocess_sequence(landmarks)
