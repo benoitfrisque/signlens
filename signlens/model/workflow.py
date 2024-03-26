@@ -7,8 +7,8 @@ from torch import rand
 from signlens.params import *
 from signlens.preprocessing.data import load_data_subset_csv, unique_train_test_split
 from signlens.preprocessing.preprocess import preprocess_and_pad_sequences_from_pq_list, encode_labels
-from signlens.model.model import initialize_model, compile_model, train_model, evaluate_model
-from utils.model_utils import save_results, save_model, load_model, create_model_folder
+from signlens.model.model_architecture import initialize_model, compile_model, train_model, evaluate_model
+from signlens.model.model_utils import save_results, save_model, load_model, create_model_folder
 
 
 def preprocess(random_state=None):

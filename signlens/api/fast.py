@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from signlens.preprocessing.preprocess import decode_labels, pad_and_preprocess_sequence, reshape_processed_data_to_tf
 from signlens.preprocessing.data import load_landmarks_json
-from utils.model_utils import load_model
+from signlens.model.model_utils import load_model
 
 app = FastAPI()
 

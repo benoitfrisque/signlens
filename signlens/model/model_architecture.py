@@ -3,7 +3,6 @@ from tensorflow.keras import Sequential
 from tensorflow.keras.layers import TimeDistributed, LSTM, Dense, Masking, Flatten, Dropout, SimpleRNN, Reshape, Bidirectional, Input
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
-from typing import Tuple
 from colorama import Fore, Style
 
 from signlens.params import *
