@@ -9,7 +9,7 @@ from colorama import Fore, Style
 from signlens.params import *
 
 
-def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_classes=NUM_CLASSES):
+def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE-N_LANDMARKS_POSE_TO_TAKE_OFF, num_classes=NUM_CLASSES):
     """
     Initializes a Sequential model with specific layers for sign recognition.
 
@@ -24,7 +24,7 @@ def initialize_model(n_frames=MAX_SEQ_LEN, n_landmarks=N_LANDMARKS_NO_FACE, num_
 
     model = Sequential()
 
-    model.add(Input(shape=(n_frames, n_landmarks * 3)))
+    model.add(Input(shape=(n_frames, n_landmarks * N_DIMENSIONS_FOR_MODEL)))
 
 
     model.add(Masking(mask_value=MASK_VALUE))

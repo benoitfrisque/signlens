@@ -382,6 +382,7 @@ def load_relevant_data_subset(pq_path, noface=True):
 
     data = pd.read_parquet(pq_path, columns=data_columns)
 
+
     if noface:
         # Exclude rows where 'type' is 'face' and some portion of 'pose'
         data = filter_out_landmarks(pq_path, landmark_types_to_remove=[
@@ -391,14 +392,20 @@ def load_relevant_data_subset(pq_path, noface=True):
         #data = data[data['type'] != 'face']
         # N_LANDMARKS_NOFACE 75
 
-        frame_rows = N_LANDMARKS_NO_FACE - (N_LANDMARKS_MAX_POSE_TO_TAKE_OFF-N_LANDMARKS_MIN_POSE_TO_TAKE_OFF+1)
+        frame_rows = N_LANDMARKS_NO_FACE - N_LANDMARKS_POSE_TO_TAKE_OFF
 
 
     else:
         frame_rows = N_LANDMARKS_ALL
 
-    data = data.drop(columns=['type',"landmark_index"])
-    data_columns = data_columns[:-2]
+
+    if N_DIMENSIONS_FOR_MODEL==2:
+        data = data.drop(columns=['type',"landmark_index","z"])
+        data_columns = data_columns[:-3]
+    else:
+        data = data.drop(columns=['type',"landmark_index"])
+        data_columns = data_columns[:-2]
+
 
     n_frames = int(len(data) / frame_rows)
     n_dim = len(data_columns)
@@ -514,15 +521,17 @@ def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_colum
         landmarks = pd.read_parquet(parquet_file_path, columns=data_columns)
 
     filtered_landmarks = landmarks.copy()
-    if "pose" in landmark_types_to_remove:
+
+    if "pose" in landmark_types_to_remove and N_LANDMARKS_POSE_TO_TAKE_OFF>0:
+
         for landmark_type in landmark_types_to_remove:
             filtered_landmarks = landmarks[
              ~((landmarks['type'] == 'pose') &
             (landmarks['landmark_index'].between(N_LANDMARKS_MIN_POSE_TO_TAKE_OFF, N_LANDMARKS_MAX_POSE_TO_TAKE_OFF)))
             ]
-    else:
-        for landmark_type in landmark_types_to_remove:
-            filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
+    #else:
+    #    for landmark_type in landmark_types_to_remove:
+    #        filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
 
     return filtered_landmarks
 
