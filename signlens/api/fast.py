@@ -4,8 +4,8 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from signlens.preprocessing.preprocess import decode_labels, pad_and_preprocess_sequence, reshape_processed_data_to_tf
-from signlens.preprocessing.data import load_landmarks_json
+from signlens.preprocessing.preprocess import decode_labels, load_relevant_data_subset_from_pq, pad_and_preprocess_landmarks_array, reshape_processed_data_to_tf
+from signlens.preprocessing.data import convert_landmarks_json_data_to_df
 from signlens.model.model_utils import load_model
 
 app = FastAPI()
@@ -34,13 +34,13 @@ async def upload_file(file: UploadFile = File(...)):
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    json_data = await file.read()
+    json = await file.read()
     json_text = json_data.decode('utf-8')
-    json_object = json.loads(json_text)
-    json_df = pd.DataFrame(json_object)
+    json_data = json.loads(json_text)
 
-    landmarks = load_landmarks_json(json_df)
-    data_processed = pad_and_preprocess_sequence(landmarks)
+    landmarks_df = convert_landmarks_json_data_to_df(json_data)
+    landmarks_array = load_relevant_data_subset_from_l(landmarks_df)
+    data_processed = pad_and_preprocess_landmarks_array(landmarks)
     data_tf = reshape_processed_data_to_tf(data_processed)
 
     prediction = app.state.model.predict(data_tf)
@@ -55,15 +55,14 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.post("/predict")
 async def predict(request: Request):
-    data = await request.json()
+    json_data = await request.json()
 
-    if not data:
+    if not json_data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    json_df = pd.DataFrame(data)
+    landmarks_df = convert_landmarks_json_data_to_df(json_data)
 
-    landmarks = load_landmarks_json(json_df)
-    data_processed = pad_and_preprocess_sequence(landmarks)
+    data_processed = pad_and_preprocess_landmarks_array(landmarks)
     data_tf = reshape_processed_data_to_tf(data_processed)
 
     prediction = app.state.model.predict(data_tf)
