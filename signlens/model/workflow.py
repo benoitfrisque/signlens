@@ -31,7 +31,7 @@ def preprocess(random_state=None):
     return X_train, X_val, y_train, y_val
 
 
-def train(X_train, y_train, patience=10, epochs=10, verbose=1, batch_size=32, validation_data=None, shuffle=True):
+def train(X_train, y_train,epochs=EPOCHS, patience=20, verbose=1, batch_size=32, validation_data=None, shuffle=True):
 
     print(Fore.MAGENTA + Style.BRIGHT + "\n⭐️ Use case: train" + Style.RESET_ALL)
 
@@ -81,11 +81,14 @@ def train(X_train, y_train, patience=10, epochs=10, verbose=1, batch_size=32, va
 def evaluate(random_state=None, model=None, paths=None):
     print(Fore.MAGENTA + Style.BRIGHT + "\n⭐️ Use case: evaluate" + Style.RESET_ALL)
 
-    if model is None:
-        model_base_dir_pattern = input("Enter the name (or a part of the name) of the model you want to load: ").strip()
-        model, paths = load_model(mode='most_recent', model_base_dir_pattern=model_base_dir_pattern, return_paths=True)
-        assert model is not None
+    #if model is None:
+    #    model_base_dir_pattern = input("Enter the name (or a part of the name) of the model you want to load: ").strip()
+    #    model, paths = load_model(mode='most_recent', model_base_dir_pattern=model_base_dir_pattern, return_paths=True)
+    #    assert model is not None
 
+    from tensorflow.keras import models
+
+    model=models.load_model("/home/wailmouro/code/benoitfrisque/signlens/models_api/model_20240326-050819.keras")
     test_data = load_data_subset_csv(balanced=True, csv_path=TRAIN_TEST_CSV_PATH, random_state=random_state)
     X_test_files = test_data.file_path
 
