@@ -1,6 +1,5 @@
 import os
 import json
-import pandas as pd
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -19,11 +18,15 @@ app.add_middleware(
 )
 
 # Load model
-model_file = "model_20240326-213903_epoch11.keras"
+model_file = "model_20240326-213903_11epoch.keras"
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 model_path = os.path.join(root_dir, 'models_api', model_file)
-app.state.model = load_model(mode='from_path', model_path=model_path)
 
+# Check if the model file exists
+if os.path.exists(model_path):
+    app.state.model = load_model(mode='from_path', model_path=model_path)
+else:
+    raise FileNotFoundError(f"Model file '{model_path}' does not exist.")
 
 @app.post("/predict_file")
 async def upload_file(file: UploadFile = File(...)):
