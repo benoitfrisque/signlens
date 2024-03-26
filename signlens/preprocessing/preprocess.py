@@ -157,32 +157,3 @@ def decode_labels(y_encoded):
     predict_proba = np.max(y_encoded, axis=1)
 
     return decoded_labels, predict_proba
-
-
-def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_columns=None):
-    """
-    Filters out specific landmark types from a parquet file.
-
-    Args:
-        parquet_file_path (str or Path): Path to the input parquet file.
-        landmark_types_to_remove (list of str): List of landmark types to be removed.
-        data_columns (list of str, optional)
-
-    Returns:
-        DataFrame: DataFrame containing filtered landmarks.
-    """
-
-    if data_columns is None:
-        landmarks = pd.read_parquet(parquet_file_path)
-    else:
-        landmarks = pd.read_parquet(parquet_file_path, columns=data_columns)
-
-    filtered_landmarks = landmarks.copy()
-    if landmark_types_to_remove=="pose":
-        for landmark_type in landmark_types_to_remove:
-            filtered_landmarks = landmarks[(landmarks['type'] == 'pose') & (~landmarks['landmark_index'].between(25, 32))]
-    else:
-        for landmark_type in landmark_types_to_remove:
-            filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
-
-    return filtered_landmarks
