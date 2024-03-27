@@ -390,7 +390,7 @@ def decode_labels(y_encoded):
     return decoded_labels, predict_proba
 
 
-def normalize_data_tf(tf,tf_val):
+def normalize_data_tf(tf_data):
     """
     Working only for 2dimensions x,y - 3D to uptade
     Normalize the data using max min normalization.
@@ -401,19 +401,19 @@ def normalize_data_tf(tf,tf_val):
     Returns:
     - tf.Tensor: Normalized data.
     """
-    mask_x = tf.not_equal(tf[..., ::2], MASK_VALUE)
-    mask_y = tf.not_equal(tf[..., 1::2], MASK_VALUE)
+    mask_x = tf.not_equal(tf_data[..., ::2], MASK_VALUE)
+    mask_y = tf.not_equal(tf_data[..., 1::2], MASK_VALUE)
 
     x_max = X_MAX
     x_min = X_MIN
     y_max = Y_MAX
     y_min = Y_MIN
 
-    x_normalized = tf.where(mask_x, (tf[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
-    y_normalized = tf.where(mask_y, (tf[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
+    x_normalized = tf.where(mask_x, (tf_data[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
+    y_normalized = tf.where(mask_y, (tf_data[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
 
 
-    tf_tensor_normalized = tf.reshape(tf.stack([x_normalized, y_normalized], axis=-1), tf.shape)
+    tf_tensor_normalized = tf.reshape(tf.stack([x_normalized, y_normalized], axis=-1), tf_data.shape)
 
 
     return tf_tensor_normalized
