@@ -70,9 +70,10 @@ N_LANDMARKS_POSE = N_LANDMARKS_POSE_TOTAL - N_LANDMARKS_POSE_TO_TAKE_OFF
 N_DIMENSIONS_FOR_MODEL = 2  # 3 x,y,z 2 x,y (number of coordinates per landmark)
 
 
-# NOrmalization parameters
+# Normalization parameters (computed 1 time from the training data) (NB: does not work for Z yet)
 
-X_MAX=1.78
-X_MIN=-1.04
-Y_MAX=1.84
-Y_MIN=-0.24
+X_MIN = -1.04
+X_MAX = 1.78
+
+Y_MAX = 1.84
+Y_MIN = -0.24
