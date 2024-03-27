@@ -454,3 +454,90 @@ def decode_labels(y_encoded):
     predict_proba = np.max(y_encoded, axis=1)
 
     return decoded_labels, predict_proba
+
+
+################################################################################
+# FUNCTIONS USED FOR PLOTTING ONLY
+################################################################################
+
+def load_relevant_data_subset_per_landmark_type(pq_path):
+    """
+    Loads relevant data subset per landmark type from a Parquet file.
+    Args:
+    pq_path (str): Path to the Parquet file containing the data.
+    Returns:
+    dict: A dictionary containing data subsets for each landmark type.
+          Keys are landmark types ('pose', 'left_hand', 'right_hand') and
+          values are numpy arrays containing data subsets for each type.
+    """
+    data_columns = ['frame', 'type', 'x', 'y', 'z']
+    data = pd.read_parquet(pq_path, columns=data_columns)
+    n_frames = data.frame.nunique()
+    data_left_hand = data[data.type == 'left_hand'][[
+        'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_right_hand = data[data.type == 'right_hand'][[
+        'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
+    data_pose = data[data.type == 'pose'][['x', 'y', 'z']
+                                          ].values.reshape(n_frames, N_LANDMARKS_POSE, 3)
+    data_dict = {
+        'pose': data_pose,
+        'left_hand': data_left_hand,
+        'right_hand': data_right_hand
+    }
+    return data_dict
+
+
+def load_relevant_data_subset_per_landmark_type_from_json(json_path):
+    """
+    Load a relevant data subset per landmark type from a JSON file.
+    Args:
+        json_path (str): The path to the JSON file.
+    Returns:
+        dict: A dictionary containing the loaded data subset per landmark type.
+            The dictionary has the following keys:
+            - 'pose': A numpy array of shape (n_frames, N_LANDMARKS_POSE, 3) containing pose data.
+            - 'left_hand': A numpy array of shape (n_frames, N_LANDMARKS_HAND, 3) containing left hand data.
+            - 'right_hand': A numpy array of shape (n_frames, N_LANDMARKS_HAND, 3) containing right hand data.
+    """
+    data = pd.read_json(json_path)
+
+    n_frames = len(data)
+
+    # Initialize numpy arrays
+    data_pose = np.empty((n_frames, N_LANDMARKS_POSE, 3))
+    data_left_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
+    data_right_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
+
+    # Populate numpy arrays
+    for i, row in data.iterrows():
+        pose_landmarks = row['pose']
+        left_hand_landmarks = row['left_hand']
+        right_hand_landmarks = row['right_hand']
+
+        # Populate pose data
+        for idx, landmark in enumerate(pose_landmarks):
+            x = landmark['x'] if landmark.get('x') is not None else np.nan
+            y = landmark['y'] if landmark.get('y') is not None else np.nan
+            z = landmark['z'] if landmark.get('z') is not None else np.nan
+            data_pose[i, idx, :] = [x, y, z]
+
+        # Populate left hand data
+        for idx, landmark in enumerate(left_hand_landmarks):
+            x = landmark['x'] if landmark.get('x') is not None else np.nan
+            y = landmark['y'] if landmark.get('y') is not None else np.nan
+            z = landmark['z'] if landmark.get('z') is not None else np.nan
+            data_left_hand[i, idx, :] = [x, y, z]
+
+        # Populate right hand data
+        for idx, landmark in enumerate(right_hand_landmarks):
+            x = landmark['x'] if landmark.get('x') is not None else np.nan
+            y = landmark['y'] if landmark.get('y') is not None else np.nan
+            z = landmark['z'] if landmark.get('z') is not None else np.nan
+            data_right_hand[i, idx, :] = [x, y, z]
+
+    data_dict = {
+        'pose': data_pose,
+        'left_hand': data_left_hand,
+        'right_hand': data_right_hand
+    }
+    return data_dict
