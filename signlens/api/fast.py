@@ -41,8 +41,10 @@ async def upload_file(file: UploadFile = File(...)):
 
     # Preprocess data for model prediction
     data_processed_tf = preprocess_data_from_json_data(json_data)
+    # data_processed_tf_normalized = normalize_data_tf(data_processed_tf)
 
     # Predict with loaded model
+    # prediction = app.state.model.predict(data_processed_tf_normalized)
     prediction = app.state.model.predict(data_processed_tf)
 
     pred, proba = decode_labels(prediction)
@@ -62,10 +64,11 @@ async def predict(request: Request):
 
     # Preprocess data for model prediction
     data_processed_tf = preprocess_data_from_json_data(json_data)
-    data_processed_tf_normalized = normalize_data_tf(data_processed_tf)
+    # data_processed_tf_normalized = normalize_data_tf(data_processed_tf)
 
     # Predict with loaded model
-    prediction = app.state.model.predict(data_processed_tf_normalized)
+    # prediction = app.state.model.predict(data_processed_tf_normalized)
+    prediction = app.state.model.predict(data_processed_tf)
 
     pred, proba = decode_labels(prediction)
 
