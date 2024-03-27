@@ -14,7 +14,7 @@ MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN"))
 DATA_FRAC = float(os.environ.get("DATA_FRAC"))
 
 EPOCHS= int(os.environ.get("EPOCHS"))
-MASK_VALUE = 0
+MASK_VALUE = -10
 
 ##################  CONSTANTS  #####################
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -46,8 +46,8 @@ TRAIN_OUTPUT_DIR        = os.path.join(BASE_DIR, 'training_outputs')
 # Mediapipe landmarks
 N_LANDMARKS_HAND    = 21
 N_LANDMARKS_POSE_TOTAL    = 33
-N_LANDMARKS_MIN_POSE_TO_TAKE_OFF= 25
-N_LANDMARKS_MAX_POSE_TO_TAKE_OFF= 32
+N_LANDMARKS_MIN_POSE_TO_TAKE_OFF= 0
+N_LANDMARKS_MAX_POSE_TO_TAKE_OFF= 0
 if N_LANDMARKS_MIN_POSE_TO_TAKE_OFF==0 & N_LANDMARKS_MAX_POSE_TO_TAKE_OFF==0:
     N_LANDMARKS_POSE_TO_TAKE_OFF=0
 else: N_LANDMARKS_POSE_TO_TAKE_OFF=(N_LANDMARKS_MAX_POSE_TO_TAKE_OFF-N_LANDMARKS_MIN_POSE_TO_TAKE_OFF+1)

@@ -157,3 +157,40 @@ def decode_labels(y_encoded):
     predict_proba = np.max(y_encoded, axis=1)
 
     return decoded_labels, predict_proba
+
+def normalize_data_tf(tf_train,tf_val):
+    """
+    Working only for 2dimensions x,y - 3D to uptade
+    Normalize the data using max min normalization.
+
+    Parameters:
+    - tf.Tensor: Data to be normalized.
+
+    Returns:
+    - tf.Tensor: Normalized data.
+    """
+    mask_x_train = tf.not_equal(tf_train[..., ::2], MASK_VALUE)
+    mask_y_train = tf.not_equal(tf_train[..., 1::2], MASK_VALUE)
+
+    mask_x_val = tf.not_equal(tf_val[..., ::2], MASK_VALUE)
+    mask_y_val = tf.not_equal(tf_val[..., 1::2], MASK_VALUE)
+
+
+    valid_x_values_train = tf.boolean_mask(tf_train[..., ::2], mask_x_train)
+    valid_y_values_train = tf.boolean_mask(tf_train[..., 1::2], mask_y_train)
+
+    x_max = tf.reduce_max(valid_x_values_train)
+    x_min = tf.reduce_min(valid_x_values_train)
+    y_max = tf.reduce_max(valid_y_values_train)
+    y_min = tf.reduce_min(valid_y_values_train)
+
+    x_normalized_train = tf.where(mask_x_train, (tf_train[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
+    y_normalized_train = tf.where(mask_y_train, (tf_train[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
+
+    x_normalized_val = tf.where(mask_x_val, (tf_val[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
+    y_normalized_val = tf.where(mask_y_val, (tf_val[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
+
+    tf_tensor_normalized_train = tf.reshape(tf.stack([x_normalized_train, y_normalized_train], axis=-1), tf_train.shape)
+    tf_tensor_normalized_val = tf.reshape(tf.stack([x_normalized_val, y_normalized_val], axis=-1), tf_val.shape)
+
+    return tf_tensor_normalized_train, tf_tensor_normalized_val
