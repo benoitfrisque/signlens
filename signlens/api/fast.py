@@ -4,8 +4,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from signlens.preprocessing.preprocess import decode_labels, pad_and_preprocess_sequence, reshape_processed_data_to_tf
-from signlens.preprocessing.data import load_landmarks_json
+from signlens.preprocessing.preprocess import preprocess_data_from_json_data, decode_labels
 from signlens.model.model_utils import load_model
 
 app = FastAPI()
@@ -20,12 +19,10 @@ app.add_middleware(
 )
 
 # Load model
-model_file = "model_v2_250signs.keras"
+model_file = "model_v3_250signs_filtered_pose2532_xy.keras"
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 model_path = os.path.join(root_dir, 'models_api', model_file)
 app.state.model = load_model(mode='from_path', model_path=model_path)
-
-# Takes in a JSON file
 
 
 @app.post("/predict_file")
@@ -34,16 +31,16 @@ async def upload_file(file: UploadFile = File(...)):
     if not file:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    json_data = await file.read()
-    json_text = json_data.decode('utf-8')
-    json_object = json.loads(json_text)
-    json_df = pd.DataFrame(json_object)
+    # Read json data from file
+    json_file = await file.read()
+    json_text = json_file.decode('utf-8')
+    json_data = json.loads(json_text)
 
-    landmarks = load_landmarks_json(json_df)
-    data_processed = pad_and_preprocess_sequence(landmarks)
-    data_tf = reshape_processed_data_to_tf(data_processed)
+    # Preprocess data for model prediction
+    data_processed_tf = preprocess_data_from_json_data(json_data)
 
-    prediction = app.state.model.predict(data_tf)
+    # Predict with loaded model
+    prediction = app.state.model.predict(data_processed_tf)
 
     pred, proba = decode_labels(prediction)
 
@@ -55,25 +52,24 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.post("/predict")
 async def predict(request: Request):
-    data = await request.json()
+    json_data = await request.json()
 
-    if not data:
+    if not json_data:
         raise HTTPException(status_code=400, detail="No data provided")
 
-    json_df = pd.DataFrame(data)
+    # Preprocess data for model prediction
+    data_processed_tf = preprocess_data_from_json_data(json_data)
 
-    landmarks = load_landmarks_json(json_df)
-    data_processed = pad_and_preprocess_sequence(landmarks)
-    data_tf = reshape_processed_data_to_tf(data_processed)
+    # Predict with loaded model
+    prediction = app.state.model.predict(data_processed_tf)
 
-    prediction = app.state.model.predict(data_tf)
+    pred, proba = decode_labels(prediction)
 
-    word, proba = decode_labels(prediction)
-
-    word = str(word[0])
+    pred = str(pred[0])
     proba = float(proba[0])
 
-    return {'Word:': word, 'Probability:': proba}
+    return {'sign:': pred, 'probability:': proba}
+
 
 
 @app.get("/")

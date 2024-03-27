@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 import numpy as np
+import json
+
 from tqdm import tqdm  # Import tqdm for the progress bar
 from pathlib import Path
 from colorama import Fore, Style
@@ -9,9 +11,8 @@ from signlens.params import *
 from signlens.preprocessing.glossary import load_glossary
 
 ################################################################################
-# LOAD CSV
+# LOAD CSV WITH LIST OF PARQUET FILES
 ################################################################################
-
 
 def load_data_subset_csv(frac=DATA_FRAC, noface=True, balanced=False, n_classes=NUM_CLASSES, n_frames=MAX_SEQ_LEN, random_state=None, csv_path=TRAIN_TRAIN_CSV_PATH):
     '''
@@ -362,182 +363,8 @@ def unique_train_test_split(force_rewrite=False):
     print(Fore.BLUE +
           f"\nTrain and test data saved at {TRAIN_TRAIN_CSV_PATH} and {TRAIN_TEST_CSV_PATH}" + Style.RESET_ALL)
 
-
 ################################################################################
-# LOAD PARQUET FILES
-################################################################################
-
-def load_relevant_data_subset(pq_path, noface=True):
-    '''
-    loads the relevant data from the parquet file.
-    If noface is set to True, it excludes landmark 'face'.
-
-    Args:
-        file_path (str or Path): Path to the input parquet file.
-
-    Returns:
-        NumPy array: NumPy array containing filtered landmarks.
-    '''
-    data_columns = ['x', 'y', 'z', 'type','landmark_index']  # Include the 'type' column
-
-    data = pd.read_parquet(pq_path, columns=data_columns)
-
-
-    if noface:
-        # Exclude rows where 'type' is 'face' and some portion of 'pose'
-        data = filter_out_landmarks(pq_path, landmark_types_to_remove=[
-                                    'face','pose'], data_columns=data_columns)
-
-
-        #data = data[data['type'] != 'face']
-        # N_LANDMARKS_NOFACE 75
-
-        frame_rows = N_LANDMARKS_NO_FACE - N_LANDMARKS_POSE_TO_TAKE_OFF
-
-
-    else:
-        frame_rows = N_LANDMARKS_ALL
-
-
-    if N_DIMENSIONS_FOR_MODEL==2:
-        data = data.drop(columns=['type',"landmark_index","z"])
-        data_columns = data_columns[:-3]
-    else:
-        data = data.drop(columns=['type',"landmark_index"])
-        data_columns = data_columns[:-2]
-
-
-    n_frames = int(len(data) / frame_rows)
-    n_dim = len(data_columns)
-
-    data = data.values.reshape(n_frames, frame_rows, n_dim)
-
-    return data.astype(np.float32)
-
-
-def load_relevant_data_subset_per_landmark_type(pq_path):
-    """
-    Loads relevant data subset per landmark type from a Parquet file.
-    Args:
-    pq_path (str): Path to the Parquet file containing the data.
-    Returns:
-    dict: A dictionary containing data subsets for each landmark type.
-          Keys are landmark types ('pose', 'left_hand', 'right_hand') and
-          values are numpy arrays containing data subsets for each type.
-    """
-    data_columns = ['frame', 'type', 'x', 'y', 'z']
-    data = pd.read_parquet(pq_path, columns=data_columns)
-    n_frames = data.frame.nunique()
-    data_left_hand = data[data.type == 'left_hand'][[
-        'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
-    data_right_hand = data[data.type == 'right_hand'][[
-        'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
-    data_pose = data[data.type == 'pose'][['x', 'y', 'z']
-                                          ].values.reshape(n_frames, N_LANDMARKS_POSE, 3)
-    data_dict = {
-        'pose': data_pose,
-        'left_hand': data_left_hand,
-        'right_hand': data_right_hand
-    }
-    return data_dict
-
-
-def load_relevant_data_subset_per_landmark_type_from_json(json_path):
-    """
-    Load a relevant data subset per landmark type from a JSON file.
-
-    Args:
-        json_path (str): The path to the JSON file.
-
-    Returns:
-        dict: A dictionary containing the loaded data subset per landmark type.
-            The dictionary has the following keys:
-            - 'pose': A numpy array of shape (n_frames, N_LANDMARKS_POSE, 3) containing pose data.
-            - 'left_hand': A numpy array of shape (n_frames, N_LANDMARKS_HAND, 3) containing left hand data.
-            - 'right_hand': A numpy array of shape (n_frames, N_LANDMARKS_HAND, 3) containing right hand data.
-    """
-    data = pd.read_json(json_path)
-
-    n_frames = len(data)
-
-    # Initialize numpy arrays
-    data_pose = np.empty((n_frames, N_LANDMARKS_POSE, 3))
-    data_left_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
-    data_right_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
-
-    # Populate numpy arrays
-    for i, row in data.iterrows():
-        pose_landmarks = row['pose']
-        left_hand_landmarks = row['left_hand']
-        right_hand_landmarks = row['right_hand']
-
-        # Populate pose data
-        for idx, landmark in enumerate(pose_landmarks):
-            x = landmark['x'] if landmark.get('x') is not None else np.nan
-            y = landmark['y'] if landmark.get('y') is not None else np.nan
-            z = landmark['z'] if landmark.get('z') is not None else np.nan
-            data_pose[i, idx, :] = [x, y, z]
-
-        # Populate left hand data
-        for idx, landmark in enumerate(left_hand_landmarks):
-            x = landmark['x'] if landmark.get('x') is not None else np.nan
-            y = landmark['y'] if landmark.get('y') is not None else np.nan
-            z = landmark['z'] if landmark.get('z') is not None else np.nan
-            data_left_hand[i, idx, :] = [x, y, z]
-
-        # Populate right hand data
-        for idx, landmark in enumerate(right_hand_landmarks):
-            x = landmark['x'] if landmark.get('x') is not None else np.nan
-            y = landmark['y'] if landmark.get('y') is not None else np.nan
-            z = landmark['z'] if landmark.get('z') is not None else np.nan
-            data_right_hand[i, idx, :] = [x, y, z]
-
-    data_dict = {
-        'pose': data_pose,
-        'left_hand': data_left_hand,
-        'right_hand': data_right_hand
-    }
-    return data_dict
-
-
-def filter_out_landmarks(parquet_file_path, landmark_types_to_remove, data_columns=None):
-    """
-    Filters out specific landmark types from a parquet file.
-
-    Args:
-        parquet_file_path (str or Path): Path to the input parquet file.
-        landmark_types_to_remove (list of str): List of landmark types to be removed.
-        data_columns (list of str, optional)
-
-    Returns:
-        DataFrame: DataFrame containing filtered landmarks.
-    """
-    if isinstance(landmark_types_to_remove, str):
-        landmark_types_to_remove = [landmark_types_to_remove]
-
-    if data_columns is None:
-        landmarks = pd.read_parquet(parquet_file_path)
-    else:
-        landmarks = pd.read_parquet(parquet_file_path, columns=data_columns)
-
-    filtered_landmarks = landmarks.copy()
-
-    if "pose" in landmark_types_to_remove and N_LANDMARKS_POSE_TO_TAKE_OFF>0:
-
-        for landmark_type in landmark_types_to_remove:
-            filtered_landmarks = landmarks[
-             ~((landmarks['type'] == 'pose') &
-            (landmarks['landmark_index'].between(N_LANDMARKS_MIN_POSE_TO_TAKE_OFF, N_LANDMARKS_MAX_POSE_TO_TAKE_OFF)))
-            ]
-    #else:
-    #    for landmark_type in landmark_types_to_remove:
-    #        filtered_landmarks = landmarks[landmarks['type'] != landmark_type]
-
-    return filtered_landmarks
-
-
-################################################################################
-# LOAD VIDEOS
+# LOAD VIDEOS (OTHER DATASET)
 ################################################################################
 
 def load_video_list_json(video_list_json_path: str = WLASL_JSON_PATH, filter_glossary: bool = True, random_seed: int = 42) -> pd.DataFrame:
@@ -582,36 +409,3 @@ def load_video_list_json(video_list_json_path: str = WLASL_JSON_PATH, filter_glo
     videos_df = videos_df.reset_index(drop=True)
 
     return videos_df
-
-def load_landmarks_json_from_path(path):
-    """
-    Load landmarks data from a JSON file.
-    Args:
-        path (str): The path to the JSON file containing the landmarks data.
-    Returns:
-        numpy.ndarray: A numpy array containing the landmarks data.
-    """
-    json_data = pd.read_json(path)
-    return load_landmarks_json(json_data)
-
-def load_landmarks_json(json_data):
-    """
-    Load landmarks from a JSON file and convert them into a numpy array.
-    Args:
-        json_data (pandas.DataFrame): The JSON data containing the landmarks.
-    Returns:
-        numpy.ndarray: A numpy array containing the landmarks.
-    """
-    n_frames = len(json_data)
-    # Initialize numpy array
-    array = np.empty((n_frames, N_LANDMARKS_NO_FACE, 3))
-    # Populate numpy array
-    for i, row in json_data.iterrows():
-        pose_landmarks = row['pose']
-        left_hand_landmarks = row['left_hand']
-        right_hand_landmarks = row['right_hand']
-        # Combine all landmarks into one list
-        all_landmarks = pose_landmarks + left_hand_landmarks + right_hand_landmarks
-        for j, landmark in enumerate(all_landmarks):
-            array[i, j] = [landmark['x'], landmark['y'], landmark['z']]
-    return array
