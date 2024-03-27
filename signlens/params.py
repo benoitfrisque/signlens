@@ -14,7 +14,7 @@ MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN"))
 DATA_FRAC = float(os.environ.get("DATA_FRAC"))
 
 EPOCHS = int(os.environ.get("EPOCHS"))
-MASK_VALUE = -10
+MASK_VALUE = 0
 
 ##################  CONSTANTS  #####################
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
