@@ -6,7 +6,7 @@ from torch import rand
 
 from signlens.params import *
 from signlens.preprocessing.data import load_data_subset_csv, unique_train_test_split
-from signlens.preprocessing.preprocess import pad_and_preprocess_sequences_from_pq_file_path_df, encode_labels
+from signlens.preprocessing.preprocess import pad_and_preprocess_sequences_from_pq_file_path_df, encode_labels,normalize_data_tf,augment_data_by_mirror_x,concatenate_data
 from signlens.model.model_architecture import initialize_model, compile_model, train_model, evaluate_model
 from signlens.model.model_utils import save_results, save_model, load_model, create_model_folder
 
@@ -28,7 +28,17 @@ def preprocess(random_state=None):
     print(Fore.BLUE + f"\nPreprocessing {len(X_val_files)} validation files..." + Style.RESET_ALL)
     X_val = pad_and_preprocess_sequences_from_pq_file_path_df(X_val_files)
 
-    return X_train, X_val, y_train, y_val
+    X_train_norm = normalize_data_tf(X_train)
+    X_val_norm = normalize_data_tf(X_val)
+    X_train_norm_aug = augment_data_by_mirror_x(X_train_norm)
+    X_val_norm_aug = augment_data_by_mirror_x(X_val_norm)
+
+    X_train_final = concatenate_data(X_train_norm, X_train_norm_aug)
+    X_val_final = concatenate_data(X_val_norm, X_val_norm_aug)
+    y_train_final = concatenate_data(y_train, y_train)
+    y_val_final = concatenate_data(y_val, y_val)
+
+    return X_train_final, X_val_final, y_train_final, y_val_final
 
 
 def train(X_train, y_train,epochs=EPOCHS, patience=20, verbose=1, batch_size=32, validation_data=None, shuffle=True):
@@ -85,6 +95,7 @@ def evaluate(random_state=None, model=None, paths=None):
         model_base_dir_pattern = input("Enter the name (or a part of the name) of the model you want to load: ").strip()
         model, paths = load_model(mode='most_recent', model_base_dir_pattern=model_base_dir_pattern, return_paths=True)
         assert model is not None
+    #from tensorflow.keras import models
 
     test_data = load_data_subset_csv(balanced=True, csv_path=TRAIN_TEST_CSV_PATH, random_state=random_state)
     X_test_files = test_data.file_path
@@ -115,6 +126,7 @@ def evaluate(random_state=None, model=None, paths=None):
 def main(random_state=None):
     unique_train_test_split()
     X_train, X_val, y_train, y_val = preprocess(random_state=random_state)
+
     shuffle = (random_state is None) # shuffle in fit if random_state is None
     model, paths = train(X_train, y_train, validation_data=(X_val, y_val), shuffle=shuffle)
     evaluate(random_state=random_state, model=model, paths=paths)

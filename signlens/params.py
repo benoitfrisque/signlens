@@ -14,7 +14,7 @@ MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN"))
 DATA_FRAC = float(os.environ.get("DATA_FRAC"))
 
 EPOCHS = int(os.environ.get("EPOCHS"))
-MASK_VALUE = 0
+MASK_VALUE = -10
 
 ##################  CONSTANTS  #####################
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -51,7 +51,7 @@ N_LANDMARKS_POSE_TOTAL = 33
 N_LANDMARKS_FACE = 468
 N_LANDMARKS_NO_FACE = 75    # N_LANDMAKRS_POSE + 2 * N_LANDMARKS_HAND
 
-# Parameters for filtering out landmarks
+
 N_LANDMARKS_MIN_POSE_TO_TAKE_OFF = 25
 N_LANDMARKS_MAX_POSE_TO_TAKE_OFF = 32
 
@@ -69,5 +69,11 @@ N_LANDMARKS_POSE = N_LANDMARKS_POSE_TOTAL - N_LANDMARKS_POSE_TO_TAKE_OFF
 
 N_DIMENSIONS_FOR_MODEL = 2  # 3 x,y,z 2 x,y (number of coordinates per landmark)
 
-if N_DIMENSIONS_FOR_MODEL not in [2, 3]:
-    raise ValueError("N_DIMENSIONS_FOR_MODEL must be either 2 or 3")
+
+# Normalization parameters (computed 1 time from the training data) (NB: does not work for Z yet)
+
+X_MIN = -1.04
+X_MAX = 1.78
+
+Y_MAX = 1.84
+Y_MIN = -0.24

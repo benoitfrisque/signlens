@@ -3,7 +3,7 @@ import json
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from signlens.preprocessing.preprocess import preprocess_data_from_json_data, decode_labels
+from signlens.preprocessing.preprocess import preprocess_data_from_json_data, decode_labels,normalize_data_tf
 from signlens.model.model_utils import load_model
 
 app = FastAPI()
@@ -62,9 +62,10 @@ async def predict(request: Request):
 
     # Preprocess data for model prediction
     data_processed_tf = preprocess_data_from_json_data(json_data)
+    data_processed_tf_normalized = normalize_data_tf(data_processed_tf)
 
     # Predict with loaded model
-    prediction = app.state.model.predict(data_processed_tf)
+    prediction = app.state.model.predict(data_processed_tf_normalized)
 
     pred, proba = decode_labels(prediction)
 
