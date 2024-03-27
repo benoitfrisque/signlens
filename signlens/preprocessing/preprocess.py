@@ -326,6 +326,77 @@ def reshape_processed_data_to_tf(data_processed, noface=True, n_frames=MAX_SEQ_L
 
     return data_tf
 
+################################################################################
+# Normalising Data
+################################################################################
+
+def normalize_data_tf(tf_data):
+    """
+    Working only for 2dimensions x,y - 3D to uptade
+    Normalize the data using max min normalization.
+
+    Parameters:
+    - tf.Tensor: Data to be normalized.
+
+    Returns:
+    - tf.Tensor: Normalized data.
+    """
+    mask_x = tf.not_equal(tf_data[..., ::2], MASK_VALUE)
+    mask_y = tf.not_equal(tf_data[..., 1::2], MASK_VALUE)
+
+    x_max = X_MAX
+    x_min = X_MIN
+    y_max = Y_MAX
+    y_min = Y_MIN
+
+    x_normalized = tf.where(mask_x, (tf_data[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
+    y_normalized = tf.where(mask_y, (tf_data[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
+
+
+    tf_tensor_normalized = tf.reshape(tf.stack([x_normalized, y_normalized], axis=-1), tf_data.shape)
+
+
+    return tf_tensor_normalized
+
+
+def augment_data_by_mirror_x(tf_normalized_train):
+    """
+    Augment data by creating a mirror effect on x-axis.
+
+    Parameters:
+    - tf.Tensor: Normalized training data.
+
+    Returns:
+    - tf.Tensor: Data augmented with mirror effect on x-axis.
+    """
+
+    x_augmented = tf.where(
+        tf_normalized_train[..., ::2] != MASK_VALUE,
+        1.0 - tf_normalized_train[..., ::2],
+        MASK_VALUE
+    )
+
+
+    y_values = tf_normalized_train[..., 1::2]
+    tf_augmented_train = tf.reshape(tf.stack([x_augmented, y_values], axis=-1), tf_normalized_train.shape)
+
+    return tf_augmented_train
+
+def concatenate_data(tf_train, tf_augmented_train):
+
+    """
+    Concatenate the original training data with the augmented data.
+
+    Parameters:
+    - tf.Tensor: Original training data.
+    - tf.Tensor: Augmented training data.
+
+    Returns:
+    - tf.Tensor: Concatenated training data.
+    """
+    return tf.concat([tf_train, tf_augmented_train], axis=0)
+
+
 
 ################################################################################
 # Label encoding and decoding
@@ -356,6 +427,7 @@ def encode_labels(y, num_classes=NUM_CLASSES):
     encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=num_classes)
 
     return encoded_labels
+
 
 def decode_labels(y_encoded):
     """
@@ -418,10 +490,8 @@ def load_relevant_data_subset_per_landmark_type(pq_path):
 def load_relevant_data_subset_per_landmark_type_from_json(json_path):
     """
     Load a relevant data subset per landmark type from a JSON file.
-
     Args:
         json_path (str): The path to the JSON file.
-
     Returns:
         dict: A dictionary containing the loaded data subset per landmark type.
             The dictionary has the following keys:
