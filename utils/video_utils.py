@@ -45,7 +45,7 @@ def serialize_landmarks(landmark_list):
     return landmarks
 
 
-def process_video_to_landmarks_json(video_path, json_output=True, save_annotated_video=False, show_preview=True, frame_interval=1, frame_limit=None, rear_camera=True, output_dir=LANDMARKS_VIDEO_DIR):
+def process_video_to_landmarks_json(video_path, json_output=True, save_annotated_video=False, show_preview=True, frame_interval=1, frame_limit=None, rear_camera=True, output_dir=LANDMARKS_VIDEO_DIR, skip_existing=False):
     """
     Process a video file and extract landmarks from each frame, then save the landmarks as JSON.
     Inspired from https://github.com/google/mediapipe/blob/master/docs/solutions/hands.md
@@ -86,6 +86,14 @@ def process_video_to_landmarks_json(video_path, json_output=True, save_annotated
     processed_frames = 0
     loop_complete = False
 
+    # Prepare JSON file
+    os.makedirs(output_dir, exist_ok=True)
+    json_path = os.path.join(output_dir, f'{filename}_landmarks.json')
+
+    if os.path.exists(json_path) and skip_existing:
+        print(f"Skipping video '{filename}' as landmarks file already exists.")
+        return
+
     # Get the fps of the original video
     fps = cap.get(cv2.CAP_PROP_FPS)
 
@@ -95,9 +103,6 @@ def process_video_to_landmarks_json(video_path, json_output=True, save_annotated
 
     try:
         if json_output:
-            # Prepare JSON file
-            os.makedirs(output_dir, exist_ok=True)
-            json_path = os.path.join(output_dir, f'{filename}_landmarks.json')
             json_file = open(json_path, 'w', encoding='UTF8')
 
         # Initialize preview window
