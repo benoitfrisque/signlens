@@ -6,7 +6,7 @@ from torch import rand
 
 from signlens.params import *
 from signlens.preprocessing.data import load_data_subset_csv, unique_train_test_split
-from signlens.preprocessing.preprocess import pad_and_preprocess_sequences_from_pq_file_path_df, encode_labels,normalize_data_tf
+from signlens.preprocessing.preprocess import pad_and_preprocess_sequences_from_pq_file_path_df, encode_labels,normalize_data_tf,augment_data_by_mirror_x,concatenate_data
 from signlens.model.model_architecture import initialize_model, compile_model, train_model, evaluate_model
 from signlens.model.model_utils import save_results, save_model, load_model, create_model_folder
 
@@ -29,7 +29,15 @@ def preprocess(random_state=None):
     X_val = pad_and_preprocess_sequences_from_pq_file_path_df(X_val_files)
 
     X_train_norm, X_val_norm=normalize_data_tf(X_train, X_val)
-    return X_train_norm, X_val_norm, y_train, y_val
+    X_train_norm_aug=augment_data_by_mirror_x(X_train_norm)
+    X_val_norm_aug=augment_data_by_mirror_x(X_val_norm)
+
+    X_train_final=concatenate_data(X_train_norm,X_train_norm_aug)
+    X_val_final=concatenate_data(X_val_norm,X_val_norm_aug)
+    y_train_final=concatenate_data(y_train,y_train)
+    y_val_final=concatenate_data(y_val,y_val)
+
+    return X_train_final, X_val_final, y_train_final, y_val_final
 
 
 def train(X_train, y_train,epochs=EPOCHS, patience=20, verbose=1, batch_size=32, validation_data=None, shuffle=True):

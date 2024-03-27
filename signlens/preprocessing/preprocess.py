@@ -357,6 +357,12 @@ def encode_labels(y, num_classes=NUM_CLASSES):
 
     return encoded_labels
 
+
+################################################################################
+# Normalising Data
+################################################################################
+
+
 def decode_labels(y_encoded):
     """
     Decode encoded labels based on the provided glossary.
@@ -382,6 +388,7 @@ def decode_labels(y_encoded):
     predict_proba = np.max(y_encoded, axis=1)
 
     return decoded_labels, predict_proba
+
 
 def normalize_data_tf(tf_train,tf_val):
     """
