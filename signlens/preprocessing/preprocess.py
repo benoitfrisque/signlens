@@ -120,9 +120,9 @@ def preprocess_data_from_json_data(json_data, noface=True, n_coordinates=N_DIMEN
         tf.Tensor: The preprocessed data in TensorFlow format.
     """
     landmarks_df = convert_landmarks_json_data_to_df(json_data)
-    filtered_landmarks_array = filter_relevant_landmarks_and_coordinates(landmarks_df)
-    data_processed = pad_and_preprocess_landmarks_array(filtered_landmarks_array)
-    data_processed_tf = reshape_processed_data_to_tf(data_processed)
+    filtered_landmarks_array = filter_relevant_landmarks_and_coordinates(landmarks_df, noface=noface, n_coordinates=n_coordinates)
+    data_processed = pad_and_preprocess_landmarks_array(filtered_landmarks_array, n_frames=n_frames)
+    data_processed_tf = reshape_processed_data_to_tf(data_processed, noface=noface, n_frames=n_frames, n_coordinates=n_coordinates)
 
     return data_processed_tf
 
