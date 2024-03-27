@@ -38,7 +38,7 @@ def preprocess(random_state=None):
    # y_train_final = concatenate_data(y_train, y_train)
    # y_val_final = concatenate_data(y_val, y_val)
 
-    return X_train, X_val, y_train, y_vall
+    return X_train, X_val, y_train, y_val
 
 
 def train(X_train, y_train,epochs=EPOCHS, patience=20, verbose=1, batch_size=32, validation_data=None, shuffle=True):
