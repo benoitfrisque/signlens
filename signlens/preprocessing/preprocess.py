@@ -326,69 +326,9 @@ def reshape_processed_data_to_tf(data_processed, noface=True, n_frames=MAX_SEQ_L
 
     return data_tf
 
-
-################################################################################
-# Label encoding and decoding
-################################################################################
-
-def encode_labels(y, num_classes=NUM_CLASSES):
-    """
-    Encode the labels in y based on a provided glossary using TensorFlow's to_categorical.
-
-    Parameters:
-    - y (pandas.Series): Series containing labels to be encoded.
-
-    Returns:
-    - numpy.ndarray: Encoded representations of the labels.
-    """
-    glossary = load_glossary()
-
-    # Extract labels from the glossary
-    labels = glossary['sign'].tolist()
-
-    # Get unique labels and their indices
-    label_indices = {label: index for index, label in enumerate(labels)}
-
-    # Encode the labels
-    encoded_labels = y.map(label_indices)
-
-    # Convert labels to one-hot encoding using TensorFlow's to_categorical
-    encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=num_classes)
-
-    return encoded_labels
-
-
 ################################################################################
 # Normalising Data
 ################################################################################
-
-
-def decode_labels(y_encoded):
-    """
-    Decode encoded labels based on the provided glossary.
-
-    Parameters:
-    - y_encoded (numpy.ndarray): Encoded representations of the labels.
-
-    Returns:
-    - pandas.Series: Decoded labels.
-    """
-
-    glossary = load_glossary()
-
-    # Extract labels from the glossary
-    labels = glossary['sign'].tolist()
-
-    # Get the index with maximum value for each row in y_encoded
-    decoded_indices = np.argmax(y_encoded, axis=1)
-
-    # Map indices back to labels
-    decoded_labels = [labels[idx] for idx in decoded_indices]
-
-    predict_proba = np.max(y_encoded, axis=1)
-
-    return decoded_labels, predict_proba
-
 
 def normalize_data_tf(tf_data):
     """
@@ -417,6 +357,7 @@ def normalize_data_tf(tf_data):
 
 
     return tf_tensor_normalized
+
 
 def augment_data_by_mirror_x(tf_normalized_train):
     """
@@ -454,3 +395,62 @@ def concatenate_data(tf_train, tf_augmented_train):
     - tf.Tensor: Concatenated training data.
     """
     return tf.concat([tf_train, tf_augmented_train], axis=0)
+
+
+
+################################################################################
+# Label encoding and decoding
+################################################################################
+
+def encode_labels(y, num_classes=NUM_CLASSES):
+    """
+    Encode the labels in y based on a provided glossary using TensorFlow's to_categorical.
+
+    Parameters:
+    - y (pandas.Series): Series containing labels to be encoded.
+
+    Returns:
+    - numpy.ndarray: Encoded representations of the labels.
+    """
+    glossary = load_glossary()
+
+    # Extract labels from the glossary
+    labels = glossary['sign'].tolist()
+
+    # Get unique labels and their indices
+    label_indices = {label: index for index, label in enumerate(labels)}
+
+    # Encode the labels
+    encoded_labels = y.map(label_indices)
+
+    # Convert labels to one-hot encoding using TensorFlow's to_categorical
+    encoded_labels = tf.keras.utils.to_categorical(encoded_labels, num_classes=num_classes)
+
+    return encoded_labels
+
+
+def decode_labels(y_encoded):
+    """
+    Decode encoded labels based on the provided glossary.
+
+    Parameters:
+    - y_encoded (numpy.ndarray): Encoded representations of the labels.
+
+    Returns:
+    - pandas.Series: Decoded labels.
+    """
+
+    glossary = load_glossary()
+
+    # Extract labels from the glossary
+    labels = glossary['sign'].tolist()
+
+    # Get the index with maximum value for each row in y_encoded
+    decoded_indices = np.argmax(y_encoded, axis=1)
+
+    # Map indices back to labels
+    decoded_labels = [labels[idx] for idx in decoded_indices]
+
+    predict_proba = np.max(y_encoded, axis=1)
+
+    return decoded_labels, predict_proba
