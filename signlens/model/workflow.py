@@ -28,7 +28,8 @@ def preprocess(random_state=None):
     print(Fore.BLUE + f"\nPreprocessing {len(X_val_files)} validation files..." + Style.RESET_ALL)
     X_val = pad_and_preprocess_sequences_from_pq_file_path_df(X_val_files)
 
-    X_train_norm, X_val_norm=normalize_data_tf(X_train, X_val)
+    X_train_norm=normalize_data_tf(X_train)
+    X_val_norm=normalize_data_tf(X_val)
     X_train_norm_aug=augment_data_by_mirror_x(X_train_norm)
     X_val_norm_aug=augment_data_by_mirror_x(X_val_norm)
 

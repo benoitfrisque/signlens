@@ -390,7 +390,7 @@ def decode_labels(y_encoded):
     return decoded_labels, predict_proba
 
 
-def normalize_data_tf(tf_train,tf_val):
+def normalize_data_tf(tf,tf_val):
     """
     Working only for 2dimensions x,y - 3D to uptade
     Normalize the data using max min normalization.
@@ -401,30 +401,22 @@ def normalize_data_tf(tf_train,tf_val):
     Returns:
     - tf.Tensor: Normalized data.
     """
-    mask_x_train = tf.not_equal(tf_train[..., ::2], MASK_VALUE)
-    mask_y_train = tf.not_equal(tf_train[..., 1::2], MASK_VALUE)
-
-    mask_x_val = tf.not_equal(tf_val[..., ::2], MASK_VALUE)
-    mask_y_val = tf.not_equal(tf_val[..., 1::2], MASK_VALUE)
-
-
-    #valid_x_values_train = tf.boolean_mask(tf_train[..., ::2], mask_x_train)
-    #valid_y_values_train = tf.boolean_mask(tf_train[..., 1::2], mask_y_train)
+    mask_x = tf.not_equal(tf[..., ::2], MASK_VALUE)
+    mask_y = tf.not_equal(tf[..., 1::2], MASK_VALUE)
 
     x_max = X_MAX
     x_min = X_MIN
     y_max = Y_MAX
     y_min = Y_MIN
-    x_normalized_train = tf.where(mask_x_train, (tf_train[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
-    y_normalized_train = tf.where(mask_y_train, (tf_train[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
 
-    x_normalized_val = tf.where(mask_x_val, (tf_val[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
-    y_normalized_val = tf.where(mask_y_val, (tf_val[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
+    x_normalized = tf.where(mask_x, (tf[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
+    y_normalized = tf.where(mask_y, (tf[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
 
-    tf_tensor_normalized_train = tf.reshape(tf.stack([x_normalized_train, y_normalized_train], axis=-1), tf_train.shape)
-    tf_tensor_normalized_val = tf.reshape(tf.stack([x_normalized_val, y_normalized_val], axis=-1), tf_val.shape)
 
-    return tf_tensor_normalized_train, tf_tensor_normalized_val
+    tf_tensor_normalized = tf.reshape(tf.stack([x_normalized, y_normalized], axis=-1), tf.shape)
+
+
+    return tf_tensor_normalized
 
 def augment_data_by_mirror_x(tf_normalized_train):
     """
