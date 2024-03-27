@@ -176,14 +176,13 @@ def normalize_data_tf(tf_train,tf_val):
     mask_y_val = tf.not_equal(tf_val[..., 1::2], MASK_VALUE)
 
 
-    valid_x_values_train = tf.boolean_mask(tf_train[..., ::2], mask_x_train)
-    valid_y_values_train = tf.boolean_mask(tf_train[..., 1::2], mask_y_train)
+    #valid_x_values_train = tf.boolean_mask(tf_train[..., ::2], mask_x_train)
+    #valid_y_values_train = tf.boolean_mask(tf_train[..., 1::2], mask_y_train)
 
-    x_max = tf.reduce_max(valid_x_values_train)
-    x_min = tf.reduce_min(valid_x_values_train)
-    y_max = tf.reduce_max(valid_y_values_train)
-    y_min = tf.reduce_min(valid_y_values_train)
-
+    x_max = X_MAX
+    x_min = X_MIN
+    y_max = Y_MAX
+    y_min = Y_MIN
     x_normalized_train = tf.where(mask_x_train, (tf_train[..., ::2] - x_min) / (x_max - x_min), MASK_VALUE)
     y_normalized_train = tf.where(mask_y_train, (tf_train[..., 1::2] - y_min) / (y_max - y_min), MASK_VALUE)
 
@@ -194,3 +193,40 @@ def normalize_data_tf(tf_train,tf_val):
     tf_tensor_normalized_val = tf.reshape(tf.stack([x_normalized_val, y_normalized_val], axis=-1), tf_val.shape)
 
     return tf_tensor_normalized_train, tf_tensor_normalized_val
+
+def augment_data_by_mirror_x(tf_normalized_train):
+    """
+    Augment data by creating a mirror effect on x-axis.
+
+    Parameters:
+    - tf.Tensor: Normalized training data.
+
+    Returns:
+    - tf.Tensor: Data augmented with mirror effect on x-axis.
+    """
+
+    x_augmented = tf.where(
+        tf_normalized_train[..., ::2] != MASK_VALUE,
+        1.0 - tf_normalized_train[..., ::2],
+        MASK_VALUE
+    )
+
+
+    y_values = tf_normalized_train[..., 1::2]
+    tf_augmented_train = tf.reshape(tf.stack([x_augmented, y_values], axis=-1), tf_normalized_train.shape)
+
+    return tf_augmented_train
+
+def concatenate_data(tf_train, tf_augmented_train):
+
+    """
+    Concatenate the original training data with the augmented data.
+
+    Parameters:
+    - tf.Tensor: Original training data.
+    - tf.Tensor: Augmented training data.
+
+    Returns:
+    - tf.Tensor: Concatenated training data.
+    """
+    return tf.concat([tf_train, tf_augmented_train], axis=0)
