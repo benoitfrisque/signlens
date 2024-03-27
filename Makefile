@@ -58,6 +58,7 @@ run_docker:
 	-e NUM_CLASSES=250 \
 	-e MAX_SEQ_LEN=100 \
 	-e DATA_FRAC=1 \
+	-e EPOCHS=100 \
 	-e PORT=8000 -p 8000:8000 ${GAR_IMAGE}:dev
 
 run_docker_prod:
@@ -65,6 +66,7 @@ run_docker_prod:
 	-e NUM_CLASSES=250 \
 	-e MAX_SEQ_LEN=100 \
 	-e DATA_FRAC=1 \
+	-e EPOCHS=100 \
 	-e PORT=8000 -p 8000:8000 ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/signlens/${GAR_IMAGE}:prod
 
 build_docker:
