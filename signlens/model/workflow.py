@@ -6,7 +6,7 @@ from torch import rand
 
 from signlens.params import *
 from signlens.preprocessing.data import load_data_subset_csv, unique_train_test_split
-from signlens.preprocessing.preprocess import preprocess_and_pad_sequences_from_pq_list, encode_labels
+from signlens.preprocessing.preprocess import preprocess_and_pad_sequences_from_pq_list, encode_labels,normalize_data_tf
 from signlens.model.model_architecture import initialize_model, compile_model, train_model, evaluate_model
 from signlens.model.model_utils import save_results, save_model, load_model, create_model_folder
 
@@ -28,7 +28,8 @@ def preprocess(random_state=None):
     print(Fore.BLUE + f"\nPreprocessing {len(X_val_files)} validation files..." + Style.RESET_ALL)
     X_val = preprocess_and_pad_sequences_from_pq_list(X_val_files)
 
-    return X_train, X_val, y_train, y_val
+    X_train_norm, X_val_norm=normalize_data_tf(X_train, X_val)
+    return X_train_norm, X_val_norm, y_train, y_val
 
 
 def train(X_train, y_train,epochs=EPOCHS, patience=20, verbose=1, batch_size=32, validation_data=None, shuffle=True):
@@ -85,10 +86,9 @@ def evaluate(random_state=None, model=None, paths=None):
         model_base_dir_pattern = input("Enter the name (or a part of the name) of the model you want to load: ").strip()
         model, paths = load_model(mode='most_recent', model_base_dir_pattern=model_base_dir_pattern, return_paths=True)
         assert model is not None
+    #from tensorflow.keras import models
 
-
-
-
+    #model=models.load_model("/home/wailmouro/code/benoitfrisque/signlens/models_api/model_epoch_10.keras")
     test_data = load_data_subset_csv(balanced=True, csv_path=TRAIN_TEST_CSV_PATH, random_state=random_state)
     X_test_files = test_data.file_path
 
@@ -118,6 +118,7 @@ def evaluate(random_state=None, model=None, paths=None):
 def main(random_state=None):
     unique_train_test_split()
     X_train, X_val, y_train, y_val = preprocess(random_state=random_state)
+
     shuffle = (random_state is None) # shuffle in fit if random_state is None
     model, paths = train(X_train, y_train, validation_data=(X_val, y_val), shuffle=shuffle)
     evaluate(random_state=random_state, model=model, paths=paths)
