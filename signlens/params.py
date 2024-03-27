@@ -13,7 +13,7 @@ MAX_SEQ_LEN = int(os.environ.get("MAX_SEQ_LEN"))
 # Percentage of the data to load
 DATA_FRAC = float(os.environ.get("DATA_FRAC"))
 
-EPOCHS= int(os.environ.get("EPOCHS"))
+EPOCHS = int(os.environ.get("EPOCHS"))
 MASK_VALUE = -10
 
 ##################  CONSTANTS  #####################
@@ -50,7 +50,8 @@ N_LANDMARKS_HAND = 21
 N_LANDMARKS_POSE_TOTAL = 33
 N_LANDMARKS_FACE = 468
 N_LANDMARKS_NO_FACE = 75    # N_LANDMAKRS_POSE + 2 * N_LANDMARKS_HAND
-N_DIMENSIONS_FOR_MODEL = 2 # 3 x,y,z 2 x,y
+
+
 N_LANDMARKS_MIN_POSE_TO_TAKE_OFF = 25
 N_LANDMARKS_MAX_POSE_TO_TAKE_OFF = 32
 
@@ -67,7 +68,6 @@ if N_LANDMARKS_MIN_POSE_TO_TAKE_OFF > N_LANDMARKS_MAX_POSE_TO_TAKE_OFF:
 N_LANDMARKS_POSE = N_LANDMARKS_POSE_TOTAL - N_LANDMARKS_POSE_TO_TAKE_OFF
 
 N_DIMENSIONS_FOR_MODEL = 2  # 3 x,y,z 2 x,y (number of coordinates per landmark)
-
 
 
 # NOrmalization parameters
