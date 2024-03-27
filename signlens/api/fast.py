@@ -18,7 +18,7 @@ app.add_middleware(
 )
 
 # Load model
-model_file = "model_20240326-213903_11epoch.keras"
+model_file = "model_v4_250signs_filtered_pose2532.keras"
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 model_path = os.path.join(root_dir, 'models_api', model_file)
 
