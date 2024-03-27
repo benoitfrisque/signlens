@@ -33,7 +33,7 @@ def write_glossary():
 
     # Take the missing signs from the landmarks glossary to append them
     missing_signs = gloss_landmarks[~gloss_landmarks.sign.isin(merged_signs)].sign
-    all_signs = pd.concat([merged_signs , missing_signs])
+    all_signs = pd.concat([merged_signs , missing_signs]).reset_index(drop=True)
 
     all_signs.to_csv(GLOSSARY_CSV_PATH, index=True)
     print("✅ Glossary written to", GLOSSARY_CSV_PATH)
