@@ -11,7 +11,7 @@ from IPython import display
 from mediapipe.python.solutions import hands as mp_hands
 from mediapipe.python.solutions import pose as mp_pose
 
-from signlens.preprocessing.data import load_relevant_data_subset_per_landmark_type
+from signlens.preprocessing.preprocess import load_relevant_data_subset_per_landmark_type
 
 def get_connections(landmark_type):
     """

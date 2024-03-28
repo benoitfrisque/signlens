@@ -39,6 +39,7 @@ TRAIN_TRAIN_CSV_PATH = os.path.join(PROCESSED_DATA_DIR, 'train_train.csv')
 TRAIN_TEST_CSV_PATH = os.path.join(PROCESSED_DATA_DIR, 'train_test.csv')
 TRAIN_FRAME_CSV_PATH = os.path.join(PROCESSED_DATA_DIR, 'train_frame.csv')
 GLOSSARY_CSV_PATH = os.path.join(PROCESSED_DATA_DIR, 'glossary.csv')
+GLOSSARY_DECODING_CSV_PATH = os.path.join(PROCESSED_DATA_DIR, 'glossary_decoding.csv')
 LANDMARKS_VIDEO_DIR = os.path.join(PROCESSED_DATA_DIR, 'landmarks_videos')
 
 

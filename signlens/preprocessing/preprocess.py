@@ -8,6 +8,7 @@ from colorama import Fore, Style
 
 from signlens.params import *
 from signlens.preprocessing.data import load_glossary
+from signlens.preprocessing.glossary import load_glossary_decoding
 
 
 # STRUCTURE
@@ -440,7 +441,7 @@ def decode_labels(y_encoded):
     - pandas.Series: Decoded labels.
     """
 
-    glossary = load_glossary()
+    glossary = load_glossary_decoding()
 
     # Extract labels from the glossary
     labels = glossary['sign'].tolist()
