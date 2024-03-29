@@ -57,8 +57,11 @@ def plot_landmarks_2D(landmarks, landmark_type=None, lm_color=None, lm_size=10):
         x=plotted_landmarks[:, 0],
         y=plotted_landmarks[:, 1],
         color=lm_color,
-        s=lm_size
+        s=lm_size,
+        label=landmark_type
     )
+
+    plt.legend(loc='lower center')
 
     if connections:
         num_landmarks = landmarks.shape[0]
