@@ -21,6 +21,7 @@ COPY setup.py setup.py
 RUN pip install .
 
 COPY processed_data/glossary.csv processed_data/glossary.csv
+COPY processed_data/glossary_decoding.csv processed_data/glossary_decoding.csv
 COPY models_api models_api
 
 CMD uvicorn signlens.api.fast:app --host 0.0.0.0 --port $PORT

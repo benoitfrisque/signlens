@@ -51,5 +51,24 @@ def load_glossary(csv_path=GLOSSARY_CSV_PATH):
     return pd.read_csv(csv_path, index_col=0)
 
 
+def load_glossary_decoding(csv_path=GLOSSARY_DECODING_CSV_PATH):
+    """
+    Load a glossary from a CSV file into a pandas DataFrame. The values are slightly corrected compared to the original glossary.
+    For example, hesheit is replaced by he / she / it. thankyou is replaced by thank you.
+
+    Parameters:
+    - csv_path (str): The file path to the CSV file containing the glossary. Default is GLOSSARY_DECODING_CSV_PATH.
+
+    Returns:
+    pandas.DataFrame: A DataFrame containing the loaded glossary data.
+    """
+    if os.path.exists(csv_path):
+        return pd.read_csv(csv_path, index_col=0)
+    else:
+        print("Glossary decoding file not found. Loading the original glossary.")
+        return pd.read_csv(GLOSSARY_CSV_PATH, index_col=0)
+
+
+
 if __name__ == "__main__":
     write_glossary()

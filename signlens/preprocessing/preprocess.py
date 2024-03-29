@@ -8,6 +8,7 @@ from colorama import Fore, Style
 
 from signlens.params import *
 from signlens.preprocessing.data import load_glossary
+from signlens.preprocessing.glossary import load_glossary_decoding
 
 
 # STRUCTURE
@@ -440,7 +441,7 @@ def decode_labels(y_encoded):
     - pandas.Series: Decoded labels.
     """
 
-    glossary = load_glossary()
+    glossary = load_glossary_decoding()
 
     # Extract labels from the glossary
     labels = glossary['sign'].tolist()
@@ -478,7 +479,7 @@ def load_relevant_data_subset_per_landmark_type(pq_path):
     data_right_hand = data[data.type == 'right_hand'][[
         'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
     data_pose = data[data.type == 'pose'][['x', 'y', 'z']
-                                          ].values.reshape(n_frames, N_LANDMARKS_POSE, 3)
+                                          ].values.reshape(n_frames, N_LANDMARKS_POSE_TOTAL, 3)
     data_dict = {
         'pose': data_pose,
         'left_hand': data_left_hand,
@@ -504,7 +505,7 @@ def load_relevant_data_subset_per_landmark_type_from_json(json_path):
     n_frames = len(data)
 
     # Initialize numpy arrays
-    data_pose = np.empty((n_frames, N_LANDMARKS_POSE, 3))
+    data_pose = np.empty((n_frames, N_LANDMARKS_POSE_TOTAL, 3))
     data_left_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
     data_right_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
 
