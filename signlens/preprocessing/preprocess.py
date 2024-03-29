@@ -505,7 +505,7 @@ def load_relevant_data_subset_per_landmark_type_from_json(json_path):
     n_frames = len(data)
 
     # Initialize numpy arrays
-    data_pose = np.empty((n_frames, N_LANDMARKS_POSE, 3))
+    data_pose = np.empty((n_frames, N_LANDMARKS_POSE_TOTAL, 3))
     data_left_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
     data_right_hand = np.empty((n_frames, N_LANDMARKS_HAND, 3))
 
