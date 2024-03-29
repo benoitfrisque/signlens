@@ -479,7 +479,7 @@ def load_relevant_data_subset_per_landmark_type(pq_path):
     data_right_hand = data[data.type == 'right_hand'][[
         'x', 'y', 'z']].values.reshape(n_frames, N_LANDMARKS_HAND, 3)
     data_pose = data[data.type == 'pose'][['x', 'y', 'z']
-                                          ].values.reshape(n_frames, N_LANDMARKS_POSE, 3)
+                                          ].values.reshape(n_frames, N_LANDMARKS_POSE_TOTAL, 3)
     data_dict = {
         'pose': data_pose,
         'left_hand': data_left_hand,
