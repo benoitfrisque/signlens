@@ -31,7 +31,7 @@ def get_light_parquet_path(parquet_file_path, dirname_suffix, filename_suffix):
     return new_parent_dir / new_parquet_file_name
 
 
-def write_light_parquet_files(parquet_file_list, landmark_types_to_remove, dirname_suffix, filename_suffix=""):
+def write_light_parquet_files(parquet_file_list, dirname_suffix, filename_suffix=""):
     """
     Writes filtered landmarks to new lightweight parquet files for a list of input files.
 
@@ -59,4 +59,4 @@ if __name__ == "__main__":
     train['file_path'] = str(TRAIN_DATA_DIR) + '/' + train['path']
     user_input = input('You are about to convert all files to lightweight files. Do you wish to continue? [Y/N] ')
     if user_input.lower() in ('y', 'yes'):
-        write_light_parquet_files(train['file_path'], landmark_types_to_remove=['face'], dirname_suffix="_noface", filename_suffix="")
+        write_light_parquet_files(train['file_path'], dirname_suffix="_noface", filename_suffix="")

@@ -187,8 +187,56 @@ def convert_landmarks_json_data_to_df(json_data):
 ################################################################################
 # PREPROCESSING FUNCTIONS
 ################################################################################
+def filter_relevant_landmarks_and_coordinates_df(landmarks_df, noface=True, n_landmarks_pose_to_remove = N_LANDMARKS_POSE_TO_TAKE_OFF):
+    '''
+    Loads the relevant data from the input DataFrame.
+    If noface is set to True, it excludes landmarks of type 'face'.
 
-def filter_relevant_landmarks_and_coordinates(landmarks_df, noface=True, n_coordinates=N_DIMENSIONS_FOR_MODEL):
+    Args:
+        landmarks_df (DataFrame): Input DataFrame containing landmarks data.
+        noface (bool): If True, excludes landmarks of type 'face'.
+        n_coordinates (int): Number of coordintates (x,y,z) to use for the model.
+
+    Returns:
+        pandas_df: DataFrame containing filtered landmarks.
+    '''
+
+     # Keep only the defined columns
+    landmarks_df = landmarks_df[['frame', 'type','landmark_index', 'x', 'y', 'z']].copy()
+
+    # Define the order of the 'type' column
+    type_order = ['face', 'pose', 'left_hand', 'right_hand']
+
+    # Convert the 'type' column to a categorical type with the specified order
+    landmarks_df['type'] = pd.Categorical(landmarks_df['type'], categories=type_order, ordered=True)
+
+    # Sort the DataFrame by 'frame', 'type' and 'landmark_index', to ensure the correct order of landmarks
+    landmarks_df.sort_values(by=['frame', 'type', 'landmark_index'], inplace=True)
+
+    landmark_types_to_remove = []
+
+    if noface:
+        # Exclude rows where 'type' is 'face' and some portion of 'pose'
+        landmark_types_to_remove.append('face')
+
+    if n_landmarks_pose_to_remove > 0:
+        landmark_types_to_remove.append('pose')
+
+    for landmark_type in landmark_types_to_remove:
+        if landmark_type == 'pose' and N_LANDMARKS_POSE_TO_TAKE_OFF > 0:
+            landmarks_df = landmarks_df[~((landmarks_df['type'] == 'pose') &
+                                          (landmarks_df['landmark_index'].\
+                                              between(N_LANDMARKS_MIN_POSE_TO_TAKE_OFF, N_LANDMARKS_MAX_POSE_TO_TAKE_OFF)))
+                                        ]
+        else:
+            landmarks_df = landmarks_df[landmarks_df['type'] != landmark_type]
+
+    landmarks_df = landmarks_df.reset_index(drop=True)
+
+    return landmarks_df
+
+
+def filter_relevant_landmarks_and_coordinates(landmarks_df, noface=True, n_coordinates=N_DIMENSIONS_FOR_MODEL, n_landmarks_pose_to_remove = N_LANDMARKS_POSE_TO_TAKE_OFF ):
     '''
     Loads the relevant data from the input DataFrame.
     If noface is set to True, it excludes landmarks of type 'face'.
@@ -202,7 +250,7 @@ def filter_relevant_landmarks_and_coordinates(landmarks_df, noface=True, n_coord
         np.ndarray: NumPy array containing filtered landmarks.
     '''
     # Keep only the defined columns
-    landmarks_df = landmarks_df[['frame', 'type','landmark_index', 'x', 'y', 'z']]
+    landmarks_df = filter_relevant_landmarks_and_coordinates_df(landmarks_df, noface=noface, n_landmarks_pose_to_remove=n_landmarks_pose_to_remove)
 
     # Define the order of the 'type' column
     type_order = ['face', 'pose', 'left_hand', 'right_hand']
@@ -215,29 +263,13 @@ def filter_relevant_landmarks_and_coordinates(landmarks_df, noface=True, n_coord
 
     n_landmarks_per_frame = N_LANDMARKS_ALL
 
-    landmark_types_to_remove = []
-
     if noface:
-        # Exclude rows where 'type' is 'face' and some portion of 'pose'
-        landmark_types_to_remove.append('face')
-
         # Calculate the number of rows per frame after removing 'face' landmarks
         n_landmarks_per_frame -= N_LANDMARKS_FACE
 
-    if N_LANDMARKS_POSE_TO_TAKE_OFF > 0:
-        landmark_types_to_remove.append('pose')
-
+    if n_landmarks_pose_to_remove > 0:
         # Calculate the number of rows per frame after removing 'pose' landmarks
         n_landmarks_per_frame -= N_LANDMARKS_POSE_TO_TAKE_OFF
-
-    for landmark_type in landmark_types_to_remove:
-        if landmark_type == 'pose' and N_LANDMARKS_POSE_TO_TAKE_OFF > 0:
-            landmarks_df = landmarks_df[~((landmarks_df['type'] == 'pose') &
-                                          (landmarks_df['landmark_index'].\
-                                              between(N_LANDMARKS_MIN_POSE_TO_TAKE_OFF, N_LANDMARKS_MAX_POSE_TO_TAKE_OFF)))
-                                        ]
-        else:
-            landmarks_df = landmarks_df[landmarks_df['type'] != landmark_type]
 
     # If the model uses 2D data, drop the 'z' dimension
     if n_coordinates == 2:
