@@ -3,7 +3,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from signlens.params import *
-from signlens.preprocessing.data import filter_out_landmarks
+from signlens.preprocessing.preprocess import filter_relevant_landmarks_and_coordinates_df
 
 
 def get_light_parquet_path(parquet_file_path, dirname_suffix, filename_suffix):
@@ -46,7 +46,8 @@ def write_light_parquet_files(parquet_file_list, landmark_types_to_remove, dirna
             new_parquet_file_path = get_light_parquet_path(parquet_file_path, dirname_suffix, filename_suffix)
 
             if not new_parquet_file_path.exists():
-                filtered_landmarks = filter_out_landmarks(parquet_file_path, landmark_types_to_remove)
+                landmarks_df = pd.read_parquet(parquet_file_path)
+                filtered_landmarks = filter_relevant_landmarks_and_coordinates_df(landmarks_df, noface=True)
                 filtered_landmarks.to_parquet(new_parquet_file_path)
 
             pbar.update(1)
