@@ -15,7 +15,7 @@ SignLens is a project that leverages the power of Deep Learning to classify Amer
 
 
 ## Data
-The data used is this project comes from the following sources:
+The data used in this project comes from the following sources:
 - [ASL Signs Kaggle Competition](https://www.kaggle.com/competitions/asl-signs)
 - [WLASL Processed Dataset](https://www.kaggle.com/datasets/risangbaskoro/wlasl-processed)
 
