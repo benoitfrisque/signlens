@@ -2,6 +2,7 @@
 
 SignLens is a project that leverages the power of Deep Learning to classify American Sign Language (ASL) gestures. The project includes scripts for data preprocessing, model training, and prediction. It is a final project for the Data Science bootcamp at Le Wagon.
 
+A web interface is accessible [here](https://signlens.streamlit.app/), while the corresponding repository can be found [here](https://github.com/benoitfrisque/signlens_app).
 
 ## Table of Contents
 - [Data](#data)
