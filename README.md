@@ -9,7 +9,6 @@ SignLens is a project that leverages the power of Deep Learning to classify Amer
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
 - [Authors](#authors)
 - [Contact](#contact)
 
@@ -21,6 +20,7 @@ The data used in this project comes from the following sources:
 
 Please download the 2 folders and put them in a folder called `raw_data`. The structure of this folder should look like this:
 ```
+raw_data
 ├── asl-signs
 │   ├── sign_to_prediction_index_map.json
 │   ├── train.csv
