@@ -39,7 +39,7 @@ If you don't have enough storage on your computer, you can keep the asl-signs di
 
 The asl-signs directory is still quite heavy. As for this project, the face landmarks are not being used, you can process the parquet files and remove the face landmarks by running the following command:
 ```bash
-python python signlens/preprocessing/preprocess_files_light.py
+python signlens/preprocessing/preprocess_files_light.py
 ```
 
 This will generate lighter parquet files that only contain relevant landmarks. You will then have a folder called train_landmark_files_no_face and you can get rid of the train_landmark_files.
